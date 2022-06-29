@@ -25,7 +25,7 @@ func main() {
 		yul_code = yul_code + "00"
 	}
 
-	yul_code = "{ mstore(0, 0x" + yul_code + ") return (0, " + fmt.Sprintf("%d", code_len) + ") }"
+	yul_code = "{ mstore(0, 0x" + yul_code + ") return(0, " + fmt.Sprintf("%d", code_len) + ") }"
 
 	fmt.Println(yul_code)
 
