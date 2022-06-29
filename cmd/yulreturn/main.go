@@ -19,16 +19,48 @@ func main() {
 
 	code_len := len(code) / 2
 
-	yul_code := code
+	totalChunks := 1
+	if code_len > 32 {
+		totalChunks = code_len / 32
 
-	for i := code_len; i < 32; i++ {
-		yul_code = yul_code + "00"
+		if code_len%32 != 0 {
+			totalChunks += 1
+		}
 	}
 
-	yul_code = "{ mstore(0, 0x" + yul_code + ") return(0, " + fmt.Sprintf("%d", code_len) + ") }"
+	codeChunks := []string{}
+	for i := 0; i < totalChunks; i++ {
+		start := (i * 32)
+		end := (i*32 + 32)
 
+		if end > code_len {
+			end = code_len
+		}
+
+		start *= 2
+		end *= 2
+
+		chunk := code[start:end]
+		codeChunks = append(codeChunks, chunk)
+	}
+
+	mstores := ""
+	for i := 0; i < len(codeChunks); i++ {
+		mstores += fmt.Sprintf("mstore(%d", i*32)
+
+		chunk := codeChunks[i]
+
+		if len(chunk) < 64 {
+			for i := len(chunk); i < 64; i += 2 {
+				chunk = chunk + "00"
+			}
+		}
+		mstores += ", 0x" + chunk + ") "
+
+	}
+
+	yul_code := "{ " + mstores + " return(0, " + fmt.Sprintf("%d", code_len) + ") }"
 	fmt.Println(yul_code)
-
 }
 
 func showUsage() {
