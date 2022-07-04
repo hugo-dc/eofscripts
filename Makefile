@@ -1,4 +1,4 @@
-all: build-idcost build-returnevm build-deploy build-call build-eof_gen build-yulreturn build-gentruncpush
+all: build-idcost build-returnevm build-deploy build-call build-eof_gen build-yulreturn build-gentruncpush build-createaddress
 build-idcost:
 	go build -o ./build/ ./cmd/idcost
 build-returnevm:
@@ -13,3 +13,5 @@ build-yulreturn:
 	go build -o ./build/ ./cmd/yulreturn
 build-gentruncpush:
 	go build -o ./build/ ./cmd/gentruncpush
+build-createaddress:
+	go build -o ./build/ ./cmd/create_address
