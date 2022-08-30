@@ -25,7 +25,12 @@ func main() {
 	code := common.GetBytes(data)
 
 	codelen := len(code)
+
 	pushlen := codelen
+	if codelen > 32 {
+		pushlen = 32
+	}
+
 	codelenhex := strconv.FormatInt(int64(codelen), 16)
 	if len(codelenhex)%2 != 0 {
 		codelenhex = "0" + codelenhex
@@ -45,6 +50,10 @@ func main() {
 
 	if codelen < 32 {
 		initialOffset := strconv.FormatInt(int64(32-codelen), 16)
+
+		if len(initialOffset)%2 != 0 {
+			initialOffset = "0" + initialOffset
+		}
 		result = append(result, initialOffset) // Offset
 	} else {
 		result = append(result, "00") // Offset

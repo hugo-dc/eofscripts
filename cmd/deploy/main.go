@@ -91,5 +91,5 @@ func main() {
 func showUsage() {
 	fmt.Println("deploy - deploy the provided evm bytecode")
 	fmt.Println("Usage:")
-	fmt.Println("\t deploy <evm bytecode>")
+	fmt.Println("\t deploy <evm init code>")
 }
