@@ -25,28 +25,63 @@ func main() {
 	code := common.GetBytes(data)
 
 	codelen := len(code)
-
-	pushlen := codelen
-	if codelen > 32 {
-		pushlen = 32
-	}
-
 	codelenhex := strconv.FormatInt(int64(codelen), 16)
 	if len(codelenhex)%2 != 0 {
 		codelenhex = "0" + codelenhex
 	}
 
-	pushOp := strconv.FormatInt(int64(95+pushlen), 16)
+	// If code length is greater than 32, calculate how many chunks of 32 bytes
+	// each can be created
+	totalChunks := 1
+	if codelen > 32 {
+		totalChunks = codelen / 32
 
+		if codelen%32 != 0 {
+			totalChunks += 1
+		}
+	}
+
+	// Split code into chunks
+	codeChunks := [][]string{}
+	for i := 0; i < totalChunks; i++ {
+		start := (i * 32)
+		end := (i*32 + 32)
+
+		if end > codelen {
+			end = codelen
+		}
+
+		chunk := code[start:end]
+
+		codeChunks = append(codeChunks, chunk)
+	}
+
+	// Store code in memory, chunk by chunk
 	var result []string
-	result = append(result, pushOp)                  // PUSHn
-	result = append(result, code[:]...)              // Code    (Value)
-	result = append(result, common.Push1().AsHex())  // PUSH1
-	result = append(result, "00")                    // 00 (Offset)
-	result = append(result, common.MStore().AsHex()) // MSTORE
-	result = append(result, common.Push1().AsHex())  // PUSH1
-	result = append(result, codelenhex)              // CodeLength (Offset end)
-	result = append(result, common.Push1().AsHex())  // PUSH1
+	pushlen := 0
+	for i := 0; i < len(codeChunks); i++ {
+		chunk := codeChunks[i]
+		if len(chunk) < 32 {
+			pushlen = len(chunk)
+		} else {
+			pushlen = 32
+		}
+		pushOp := strconv.FormatInt(int64(95+pushlen), 16)
+		result = append(result, pushOp)                 // PUSHn
+		result = append(result, chunk[:]...)            // Code    (Value)
+		result = append(result, common.Push1().AsHex()) // PUSH1
+
+		offset := strconv.FormatInt(int64(i*32), 16)
+		if len(offset)%2 != 0 {
+			offset = "0" + offset
+		}
+		result = append(result, offset)                  // Offset
+		result = append(result, common.MStore().AsHex()) // MSTORE
+	}
+
+	result = append(result, common.Push1().AsHex()) // PUSH1
+	result = append(result, codelenhex)             // CodeLength (Offset end)
+	result = append(result, common.Push1().AsHex()) // PUSH1
 
 	if codelen < 32 {
 		initialOffset := strconv.FormatInt(int64(32-codelen), 16)

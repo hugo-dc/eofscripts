@@ -11,6 +11,9 @@ func main() {
 		return
 	}
 
+	// TODO: Manage code as bytes:
+	//     data := os.Args[1]
+	//     code := common.GetBytes(data)
 	code := os.Args[1]
 
 	if len(code)%2 != 0 {

@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
+// TODO: Change name to GetHexBytes
 func GetBytes(data string) []string {
 	if data[:2] == "0x" {
 		data = data[2:]
