@@ -20,6 +20,11 @@ func main() {
 	data_str := ""
 	if len(os.Args) == 4 {
 		data_str = os.Args[3]
+
+		if data_str[:2] == "0x" {
+			data_str = data_str[2:]
+		}
+
 		amount_, err := strconv.ParseInt(os.Args[2], 10, 64)
 
 		if err != nil {
@@ -32,6 +37,7 @@ func main() {
 
 	to := ethCommon.HexToAddress(os.Args[1])
 	data := ethCommon.Hex2Bytes(data_str)
+
 	err := common.SendTransaction(to, *amount, data)
 
 	if err != nil {
