@@ -31,6 +31,12 @@ func Return() OpCode {
 	}
 }
 
+func Shl() OpCode {
+	return OpCode{
+		Code: 0x1b,
+	}
+}
+
 func (op OpCode) AsHex() string {
 	opValue := strconv.FormatInt(int64(op.Code), 16)
 

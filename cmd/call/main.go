@@ -10,6 +10,12 @@ import (
 	common "github.com/hugo-dc/ethscripts/common"
 )
 
+func showUsage() {
+	fmt.Println("call - Call address")
+	fmt.Println("Usage:")
+	fmt.Println("\t call <address> [amount] [data] - amount default: 0, data default: empty.")
+}
+
 func main() {
 	if len(os.Args) != 4 && len(os.Args) != 2 {
 		showUsage()
@@ -44,10 +50,4 @@ func main() {
 		fmt.Println("ERROR: ", err)
 	}
 
-}
-
-func showUsage() {
-	fmt.Println("call - Call address")
-	fmt.Println("Usage:")
-	fmt.Println("\t call <address> [amount] [data] - amount default: 0, data default: empty.")
 }

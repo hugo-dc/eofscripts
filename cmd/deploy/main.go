@@ -20,7 +20,11 @@ func main() {
 		return
 	}
 
-	data := ethCommon.Hex2Bytes(os.Args[1])
+	data_str := os.Args[1]
+	if data_str[:2] == "0x" {
+		data_str = data_str[2:]
+	}
+	data := ethCommon.Hex2Bytes(data_str)
 	fmt.Println("data:", data)
 
 	cl, err := ethclient.Dial("http://192.168.10.243:8545")

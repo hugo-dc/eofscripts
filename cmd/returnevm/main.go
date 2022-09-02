@@ -58,17 +58,26 @@ func main() {
 
 	// Store code in memory, chunk by chunk
 	var result []string
-	pushlen := 0
 	for i := 0; i < len(codeChunks); i++ {
 		chunk := codeChunks[i]
-		if len(chunk) < 32 {
-			pushlen = len(chunk)
-		} else {
-			pushlen = 32
-		}
+		pushlen := len(chunk)
+
 		pushOp := strconv.FormatInt(int64(95+pushlen), 16)
-		result = append(result, pushOp)                 // PUSHn
-		result = append(result, chunk[:]...)            // Code    (Value)
+		result = append(result, pushOp)      // PUSHn
+		result = append(result, chunk[:]...) // Code
+
+		if pushlen < 32 {
+			totalBits := (32 - pushlen) * 8
+
+			totalBitsHex := strconv.FormatInt(int64(totalBits), 16)
+			if len(totalBitsHex)%2 != 0 {
+				totalBitsHex = "0" + totalBitsHex
+			}
+			result = append(result, common.Push1().AsHex()) // PUSH1
+			result = append(result, totalBitsHex)           // <totalBits>
+			result = append(result, common.Shl().AsHex())   // SHL
+		}
+
 		result = append(result, common.Push1().AsHex()) // PUSH1
 
 		offset := strconv.FormatInt(int64(i*32), 16)
@@ -83,16 +92,18 @@ func main() {
 	result = append(result, codelenhex)             // CodeLength (Offset end)
 	result = append(result, common.Push1().AsHex()) // PUSH1
 
-	if codelen < 32 {
-		initialOffset := strconv.FormatInt(int64(32-codelen), 16)
+	/*
+		if codelen < 32 {
+			initialOffset := strconv.FormatInt(int64(32-codelen), 16)
 
-		if len(initialOffset)%2 != 0 {
-			initialOffset = "0" + initialOffset
-		}
-		result = append(result, initialOffset) // Offset
-	} else {
-		result = append(result, "00") // Offset
-	}
+			if len(initialOffset)%2 != 0 {
+				initialOffset = "0" + initialOffset
+			}
+			result = append(result, initialOffset) // Offset
+		} else {
+	*/
+	result = append(result, "00") // Offset
+	//}
 	result = append(result, common.Return().AsHex()) // RETURN
 	result = append(result, common.Stop().AsHex())   // STOP
 
