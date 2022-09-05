@@ -1,0 +1,17 @@
+#!/bin/bash
+# Used in CreateTransactionEOF1Filler.yml - Valid Legacy Initcode containing truncated push data at the end
+
+cleanyul="mstore(0x00, 0xef00010100060060016001550000000000000000000000000000000000000000) return(0x00, 0x0d)"
+compiledyul=$(yul_comp "{ $cleanyul }" | tail -n1)
+
+
+b1=$(./build/gentruncpush $1 | head -n2 | tail -n1)
+y1=$(./build/gentruncpush $1 | head -n1 | tail -n1)
+b2=$(./build/gentruncpush $1 | tail -n1)
+y2=$(./build/gentruncpush $1 | head -n3 | tail -n1)
+
+echo "# { $cleanyul $b1 }"
+echo "- ':label legacy_unnafected_initcode_containing_truncated_push$1_a :raw 0x$compiledyul$y1'"
+echo "# { $cleanyul $b2 }"
+echo "- ':label legacy_unnafected_initcode_containing_truncated_push$1_b :raw 0x$compiledyul$y2'"
+

@@ -1,0 +1,37 @@
+#!/bin/bash
+
+echo PUSH$1
+
+
+yul_push=$(./build/gentruncpush $1 | head -n2 | tail -n1)
+
+yul_correct="sstore(0x1, 0x1) sstore(0x2, 0x2)"
+yul_code="{ $yul_correct $yul_push"
+
+yul_compiled=$(yul_comp "{ $yul_correct }" | tail -n1)
+tpush=$(./build/gentruncpush $1 | head -n1)
+invcode="$yul_compiled$tpush"
+inv_eofcode=$(./build/eof_gen "" "$invcode" | tail -n1)
+yul_init=$(./build/yulreturn $inv_eofcode)
+yul_init_compiled=$(yul_comp "$yul_init" | tail -n1)
+eof_init=$(./build/eof_gen "" "$yul_init_compiled" | tail -n1)
+
+echo "init code: $yul_init"
+echo "deployed code: $yul_code - $inv_eofcode"
+echo "0x$eof_init"
+
+echo ""
+
+tpush=$(./build/gentruncpush $1 | tail -n2 | head -n1)
+yul_push=$(./build/gentruncpush $1 | tail -n1)
+yul_code="{ $yul_correct $yul_push"
+invcode="$yul_compiled$tpush"
+inv_eofcode=$(./build/eof_gen "" "$invcode" | tail -n1)
+yul_init=$(./build/yulreturn "$inv_eofcode")
+yul_init_compiled=$(yul_comp "$yul_init" | tail -n1)
+eof_init=$(./build/eof_gen "" "$yul_init_compiled" | tail -n1)
+
+echo "init code: $yul_init"
+echo "deployed code: $yul_code - $inv_eofcode"
+echo "0x$eof_init"
+

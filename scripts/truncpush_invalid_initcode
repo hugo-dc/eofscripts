@@ -1,0 +1,33 @@
+#!/bin/bash
+# Used in CREATE_EOF1InvalidFiller.yml - Invalid EOF initcode
+
+echo PUSH$1
+
+cleanyul="mstore(0x00, 0xef000101001b0060016001550000000000000000000000000000000000000000) return(0x00, 0x0d)"
+compiledyul=$(yul_comp "{ $cleanyul }" | tail -n1)
+y=$(./build/gentruncpush $1 | head -n2 | tail -n1)
+
+yul="$cleanyul $y"
+
+echo $yul
+
+tpush1=$(./build/gentruncpush $1 | head -n1)
+
+invcode="$compiledyul$tpush1"
+eof=$(./build/eof_gen "" "$invcode" | tail -n1)
+
+echo "- ':label truncated_push$1_a :raw 0x$eof'"
+
+y=$(./build/gentruncpush $1 | tail -n1)
+yul="$cleanyul $y"
+
+echo $yul
+
+tpush2=$(./build/gentruncpush $1 | tail -n2 | head -n1)
+
+invcode="$compiledyul$tpush2"
+
+eof=$(./build/eof_gen "" "$invcode" | tail -n1)
+
+echo "- ':label truncated_push$1_b :raw 0x$eof'"
+
