@@ -17,8 +17,5 @@ fi
 for i in {0..256}
 do
   result=$(./build/create_address $ADDRESS $i)
-  echo "${result:2}:  # PUSH$(( $i + 1 ))"
-  echo "  nonce: 1"
-  echo "  storage: {}"
-  echo "  code: ''"
+  echo "${result:2}"
 done

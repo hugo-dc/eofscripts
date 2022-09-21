@@ -21,6 +21,7 @@ while true; do
     "id": 1
   }')
 
+  echo "Block: $(echo $lastBlock | jq '.number') " 
   txs=$(echo $lastBlock | jq '.result.transactions')
 
   if [ "$txs" = "[]" ]; then
