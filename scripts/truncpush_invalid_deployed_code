@@ -2,7 +2,6 @@
 
 echo PUSH$1
 
-
 yul_push=$(./build/gentruncpush $1 | head -n2 | tail -n1)
 
 yul_correct="sstore(0x1, 0x1) sstore(0x2, 0x2)"
@@ -16,9 +15,9 @@ yul_init=$(./build/yulreturn $inv_eofcode)
 yul_init_compiled=$(yul_comp "$yul_init" | tail -n1)
 eof_init=$(./build/eof_gen "" "$yul_init_compiled" | tail -n1)
 
-echo "init code: $yul_init"
-echo "deployed code: $yul_code - $inv_eofcode"
-echo "0x$eof_init"
+echo "code: $yul_code - $inv_eofcode"
+echo "- ':label valid_leg_init_invalid_code_truncated_push$1_a :yul $yul_init'"
+#echo ":label valid_init_invalid_code_truncated_push$1_a :raw 0x$eof_init"
 
 echo ""
 
@@ -31,7 +30,7 @@ yul_init=$(./build/yulreturn "$inv_eofcode")
 yul_init_compiled=$(yul_comp "$yul_init" | tail -n1)
 eof_init=$(./build/eof_gen "" "$yul_init_compiled" | tail -n1)
 
-echo "init code: $yul_init"
-echo "deployed code: $yul_code - $inv_eofcode"
-echo "0x$eof_init"
+echo "code: $yul_code - $inv_eofcode"
+echo "- ':label valid_leg_init_invalid_code_truncated_push$1_b :yul $yul_init'"
+#echo ":label valid_init_invalid_code_truncated_push$1_b :raw 0x$eof_init"
 

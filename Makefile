@@ -1,9 +1,11 @@
-all: build-all install
-build-all: build-idcost build-returnevm build-deploy build-call build-eof_gen build-yulreturn build-gentruncpush build-createaddress build-createaddress2
+all: build install
+build: build-idcost build-returnevm build-returneofdata build-deploy build-call build-eof_gen build-yulreturn build-gentruncpush build-createaddress build-createaddress2
 build-idcost:
 	go build -o ./build/ ./cmd/idcost
 build-returnevm:
 	go build -o ./build/ ./cmd/returnevm
+build-returneofdata:
+	go build -o ./build/ ./cmd/returneofdata
 build-deploy:
 	go build -o ./build/ ./cmd/deploy
 build-call:

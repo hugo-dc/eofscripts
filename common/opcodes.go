@@ -13,6 +13,12 @@ func Stop() OpCode {
 	}
 }
 
+func CodeCopy() OpCode {
+	return OpCode{
+		Code: 0x39,
+	}
+}
+
 func MStore() OpCode {
 	return OpCode{
 		Code: 0x52,
