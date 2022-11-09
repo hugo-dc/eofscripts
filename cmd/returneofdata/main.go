@@ -3,62 +3,61 @@ package main
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/hugo-dc/ethscripts/common"
 )
 
 func showUsage() {
-	fmt.Println("returneofdata - Receives data as bytes, will generate EOF code to read the data and return it")
+	fmt.Println("returneofdata - Receives data as bytes, will generate EOF code to read the data and return it, if some code is provided, it will be added before the code returning the data")
 	fmt.Println("Usage:")
-	fmt.Println("\treturneofdata <data>")
+	fmt.Println("\treturneofdata <data> [code]")
 }
 
 func main() {
-	if len(os.Args) != 2 {
+	if len(os.Args) < 2 || len(os.Args) > 3 {
 		showUsage()
 		return
 	}
 
 	data_input := os.Args[1]
 	data := common.GetBytes(data_input)
-	data_len := len(data)
-	data_len_hex := strconv.FormatInt(int64(data_len), 16)
+	data_len_hex := common.IntToHex(int64(len(data)))
 
-	if len(data_len_hex) < 2 {
-		data_len_hex = "0" + data_len_hex
+	var code []string
+	if len(os.Args) == 3 {
+		code_input := os.Args[2]
+		code = common.GetBytes(code_input)
 	}
 
-	var result []string
+	code_len_hex := common.IntToHex(int64(len(code) + 22)) // adds 12 counting the following opcodes and the EOF header
 
 	// Push data length
-	result = append(result, common.Push1().AsHex())
-	result = append(result, data_len_hex)
+	code = append(code, common.Push1().AsHex())
+	code = append(code, data_len_hex)
 
-	// Push data offset (eof_header_len(10) + evm_bytecode_len(12) = 22 - 0x16)
-	result = append(result, common.Push1().AsHex())
-	result = append(result, "16")
+	// Push data offset (eof_header_len + evm_bytecode_len)
+	code = append(code, common.Push1().AsHex())
+	code = append(code, code_len_hex)
 
 	// Push result offset (0)
-	result = append(result, common.Push1().AsHex())
-	result = append(result, "00")
+	code = append(code, common.Push1().AsHex())
+	code = append(code, "00")
 
 	// codecopy
-	result = append(result, common.CodeCopy().AsHex())
+	code = append(code, common.CodeCopy().AsHex())
 
 	// Push return size
-	result = append(result, common.Push1().AsHex())
-	result = append(result, data_len_hex)
+	code = append(code, common.Push1().AsHex())
+	code = append(code, data_len_hex)
 
 	// Push return offset (0)
-	result = append(result, common.Push1().AsHex())
-	result = append(result, "00")
+	code = append(code, common.Push1().AsHex())
+	code = append(code, "00")
 
 	// return
-	result = append(result, common.Return().AsHex())
+	code = append(code, common.Return().AsHex())
 
-	eof_code := common.GenerateEOF(strings.Join(data[:], ""), strings.Join(result[:], ""))
-
+	eof_code := common.GenerateEOF(strings.Join(data[:], ""), strings.Join(code[:], ""))
 	fmt.Println(eof_code)
 }

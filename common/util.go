@@ -3,6 +3,7 @@ package common
 import (
 	"context"
 	"math/big"
+	"strconv"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -27,6 +28,15 @@ func GetBytes(data string) []string {
 	}
 
 	return hexBytes
+}
+
+func IntToHex(number int64) string {
+	hex := strconv.FormatInt(number, 16)
+
+	if len(hex) != 2 {
+		hex = "0" + hex
+	}
+	return hex
 }
 
 func SendTransaction(to ethCommon.Address, amount big.Int, data []byte) error {
