@@ -58,6 +58,10 @@ func main() {
 	// return
 	code = append(code, common.Return().AsHex())
 
-	eof_code := common.GenerateEOF(strings.Join(data[:], ""), strings.Join(code[:], ""))
+	data_content := strings.Join(data[:], "")
+	code_contents := []string{strings.Join(code[:], "")}
+	types := [][]int64{}
+
+	eof_code := common.GenerateEOF(data_content, types, code_contents, false)
 	fmt.Println(eof_code)
 }
