@@ -1,5 +1,5 @@
 all: build install
-build: build-idcost build-returnevm build-returneofdata build-deploy build-call build-eof_gen build-yulreturn build-gentruncpush build-createaddress build-createaddress2
+build: build-idcost build-returnevm build-returneofdata build-deploy build-call build-eof_gen build-yulreturn build-gentruncpush build-createaddress build-createaddress2 build-mnem2evm build-evm2mnem
 build-idcost:
 	go build -o ./build/ ./cmd/idcost
 build-returnevm:
@@ -20,5 +20,9 @@ build-createaddress:
 	go build -o ./build/ ./cmd/create_address
 build-createaddress2:
 	go build -o ./build/ ./cmd/create_address2
+build-mnem2evm:
+	go build -o ./build/ ./cmd/mnem2evm
+build-evm2mnem:
+	go build -o ./build/ ./cmd/evm2mnem
 install:
 	mv ./build/* ~/.bin/
