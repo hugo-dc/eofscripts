@@ -16,16 +16,15 @@ func Evm2Mnem(bytecode string) string {
 
 		if err != nil {
 			// TODO
+			fmt.Println("Error: ", err)
 		}
 		if op, ok := opcodes[int(code)]; ok {
 			result = result + op.Name
 
 			if op.Immediates > 0 {
-				if op.Name != "RJUMP" && op.Name != "RJUMPI" {
-					immediate := bytecode[i+2 : i+2+(op.Immediates*2)]
-					result = result + "(0x" + immediate + ")"
-					i += (op.Immediates * 2)
-				}
+				immediate := bytecode[i+2 : i+2+(op.Immediates*2)]
+				result = result + "(0x" + immediate + ")"
+				i += (op.Immediates * 2)
 			}
 		} else {
 			fmt.Println("Error: opcode " + "0x" + code_str + " not found")

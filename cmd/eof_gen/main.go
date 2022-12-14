@@ -12,7 +12,7 @@ import (
 func showUsage() {
 	fmt.Println("eof_gen - Generate EOF version of the provided EVM code")
 	fmt.Println("Usage:")
-	fmt.Println("\teof_gen d:[data] c:<code>|C:<input>:<outputs>:<code>")
+	fmt.Println("\teof_gen d:[data] c:<code>|C:<input>:<outputs>:<code> [-t]")
 }
 
 func main() {
@@ -59,6 +59,10 @@ func main() {
 
 				code = append(code, code_contents[3])
 			}
+		}
+
+		if arg == "-t" {
+			showTypes = true
 		}
 	}
 

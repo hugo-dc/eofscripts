@@ -41,7 +41,7 @@ func GenerateEOF(data string, types [][]int64, code []string, withTypes bool) st
 		types_content = types_content + inputs_hex + outputs_hex
 	}
 
-	code_section := "01"
+	code_section := ""
 	code_content := ""
 	for _, c := range code {
 		if len(c)%2 != 0 {
@@ -57,7 +57,7 @@ func GenerateEOF(data string, types [][]int64, code []string, withTypes bool) st
 		if len(code_len_hex) < 4 {
 			code_len_hex = "00" + code_len_hex
 		}
-		code_section = code_section + code_len_hex
+		code_section = code_section + "01" + code_len_hex
 		code_content = code_content + c
 	}
 
@@ -82,7 +82,7 @@ func GenerateEOF(data string, types [][]int64, code []string, withTypes bool) st
 
 	eof_code := "ef0001"
 	if withTypes {
-		eof_code = eof_code + types_section + code_section + data_section + types_content + terminator + code_content + data
+		eof_code = eof_code + types_section + code_section + data_section + terminator + types_content + code_content + data
 	} else {
 		eof_code = eof_code + code_section + data_section + terminator + code_content + data
 	}
