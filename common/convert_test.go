@@ -6,8 +6,11 @@ import (
 
 var mnems = [][]string{
 	{"RJUMPI", "-4", "5dfffc"},
+	{"RJUMP", "0", "5c0000"},
 	{"PUSH1", "0", "6000"},
 	{"STOP", "", "00"},
+	{"CODESIZE", "", "38"},
+	{"RJUMPV", "0200000000", "5e0200000000"},
 }
 
 func TestOpcode2EVM(t *testing.T) {

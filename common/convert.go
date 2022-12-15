@@ -17,6 +17,7 @@ func Evm2Mnem(bytecode string) string {
 		if err != nil {
 			// TODO
 			fmt.Println("Error: ", err)
+			return ""
 		}
 		if op, ok := opcodes[int(code)]; ok {
 			result = result + op.Name
@@ -37,8 +38,14 @@ func Evm2Mnem(bytecode string) string {
 
 func opcode2evm(opcode string, immediate string) (string, error) {
 	opcodes := GetOpcodesByName()
+	immediate = strings.ToLower(immediate)
 
 	op := opcodes[opcode]
+
+	if op.Name == "" {
+		return "", errors.New("Opcode not assigned")
+	}
+
 	if immediate == "" && op.Immediates > 0 {
 		return "", errors.New("Immediate expected for opcode")
 	}
@@ -53,6 +60,28 @@ func opcode2evm(opcode string, immediate string) (string, error) {
 	}
 
 	if immediate != "" {
+		if op.Name == "RJUMPV" {
+			if immediate[:2] != "0x" {
+				return "", errors.New("Immediate must be a hexadecimal number")
+			}
+			if len(immediate) < 8 {
+				return "", errors.New("Minimum immediate length 6")
+			}
+
+			count, err := strconv.ParseInt(immediate[2:4], 10, 64)
+
+			if err != nil {
+				return "", err
+			}
+
+			if count != int64(len(immediate[4:])/4) {
+				return "", errors.New("count does not match total relative offsets")
+			}
+
+			result = result + immediate[2:]
+			return result, nil
+		}
+
 		imm, err := strconv.ParseInt(immediate, 10, 64)
 
 		if err != nil {
@@ -71,6 +100,13 @@ func opcode2evm(opcode string, immediate string) (string, error) {
 			imm_hex = strconv.FormatInt(imm, 16)
 			if len(imm_hex)%2 != 0 {
 				imm_hex = "0" + imm_hex
+			}
+			for {
+				if len(imm_hex) < op.Immediates*2 {
+					imm_hex = "00" + imm_hex
+				} else {
+					break
+				}
 			}
 		}
 
@@ -100,8 +136,8 @@ func Mnem2Evm(mn string) string {
 
 		if err != nil {
 			fmt.Println("Error: ", err, opcode, immediate)
+			return ""
 		}
-
 		result = result + evm
 	}
 

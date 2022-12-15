@@ -28,3 +28,5 @@ build-evm2mnem:
 	go build -o ./build/ ./cmd/evm2mnem
 install:
 	mv ./build/* ~/.bin/
+test:
+	cd common && go test
