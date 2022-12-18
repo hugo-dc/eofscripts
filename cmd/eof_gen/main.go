@@ -64,6 +64,8 @@ func main() {
 
 		if arg == "-o" {
 			oldCode = true
+		} else {
+			showTypes = true
 		}
 	}
 
