@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	common "github.com/hugo-dc/ethscripts/common"
+	"github.com/hugo-dc/ethscripts/common"
 )
 
 func showUsage() {
@@ -17,19 +17,17 @@ func showUsage() {
 
 func main() {
 	data := ""
-	code := []string{}
-	types := [][]int64{}
-
 	showTypes := false
+	oldCode := false
+	eofObject := common.NewEOFObject()
 	for _, arg := range os.Args {
 		if arg[:2] == "d:" {
 			data = arg[2:]
 		}
 
 		if arg[:2] == "c:" {
-			code_type := []int64{0, 0}
-			types = append(types, code_type)
-			code = append(code, arg[2:])
+			code := arg[2:]
+			eofObject.AddCode(code)
 		}
 
 		if arg[:2] == "C:" {
@@ -55,17 +53,21 @@ func main() {
 				}
 
 				code_type := []int64{inputs, outputs}
-				types = append(types, code_type)
-
-				code = append(code, code_contents[3])
+				code := code_contents[3]
+				eofObject.AddCodeWithType(code, code_type)
 			}
 		}
 
 		if arg == "-t" {
 			showTypes = true
 		}
+
+		if arg == "-o" {
+			oldCode = true
+		}
 	}
 
-	eof_code := common.GenerateEOF(data, types, code, showTypes)
+	eofObject.AddData(data)
+	eof_code := eofObject.Code(oldCode, showTypes)
 	fmt.Println(eof_code)
 }

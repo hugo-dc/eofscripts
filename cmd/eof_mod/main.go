@@ -20,8 +20,7 @@ func main() {
 	}
 
 	eofCode := os.Args[1]
-
-	eofObject := common.ParseEOF(eofCode)
+	eofObject := common.ParseOldEOF(eofCode)
 
 	defaultTypes := false
 	for i := 2; i < len(os.Args); i++ {
@@ -45,5 +44,5 @@ func main() {
 			fmt.Println("Warning: Code already contains types")
 		}
 	}
-	fmt.Println(eofObject.Code())
+	fmt.Println(eofObject.Code(true, defaultTypes))
 }

@@ -1,5 +1,5 @@
 all: build install
-build: build-idcost build-returnevm build-returneofdata build-deploy build-call build-eof_gen build-eof_mod build-yulreturn build-gentruncpush build-createaddress build-createaddress2 build-mnem2evm build-evm2mnem
+build: build-idcost build-returnevm build-returneofdata build-deploy build-call build-eof_gen build-eof_mod build-eof_upd build-yulreturn build-gentruncpush build-createaddress build-createaddress2 build-mnem2evm build-evm2mnem 
 build-idcost:
 	go build -o ./build/ ./cmd/idcost
 build-returnevm:
@@ -14,6 +14,8 @@ build-eof_gen:
 	go build -o ./build/ ./cmd/eof_gen
 build-eof_mod:
 	go build -o ./build/ ./cmd/eof_mod
+build-eof_upd:
+	go build -o ./build/ ./cmd/eof_upd
 build-yulreturn:
 	go build -o ./build/ ./cmd/yulreturn
 build-gentruncpush:

@@ -13,47 +13,79 @@ type EOFObject struct {
 	Data         string
 }
 
-func (eof *EOFObject) Code() string {
+const (
+	cOldCodeId = "01"
+	cOldDataId = "02"
+	cOldTypeId = "03"
+	cTypeId    = "01"
+	cCodeId    = "02"
+	cDataId    = "03"
+)
+
+func NewEOFObject() EOFObject {
+	return EOFObject{
+		Version:      int64(1),
+		CodeSections: make([]string, 0),
+		Types:        make([][]int64, 0),
+		Data:         "",
+	}
+}
+
+func (eof *EOFObject) CodeNew(withTypes bool) string {
+	return eof.Code(false, withTypes)
+}
+
+func (eof *EOFObject) Code(old bool, withTypes bool) string {
 	eof_code := "ef"
 
-	versionHex := fmt.Sprintf("%04x", eof.Version)
+	typeId := cTypeId
+	codeId := cCodeId
+	dataId := cDataId
 
+	if old {
+		typeId = cOldTypeId
+		codeId = cOldCodeId
+		dataId = cOldDataId
+	}
+
+	versionHex := fmt.Sprintf("%04x", eof.Version)
 	typesHeader := ""
 	if len(eof.Types) > 0 {
 		typesLengthHex := fmt.Sprintf("%04x", len(eof.Types)*2)
-		typesHeader = "03" + typesLengthHex
+		typesHeader = typeId + typesLengthHex
 	}
 
 	codeHeaders := ""
 	for _, c := range eof.CodeSections {
 		codeLengthHex := fmt.Sprintf("%04x", len(c)/2)
-		codeHeaders = codeHeaders + "01" + codeLengthHex
+		codeHeaders = codeHeaders + codeId + codeLengthHex
 	}
 
 	dataHeader := ""
 	if len(eof.Data) > 0 {
 		dataLengthHex := fmt.Sprintf("%04x", len(eof.Data)/2)
-		dataHeader = dataHeader + "02" + dataLengthHex
+		dataHeader = dataHeader + dataId + dataLengthHex
 	}
 
 	terminator := "00"
 
 	typeContents := ""
-	fmt.Println(">types: ", eof.Types)
 	for _, t := range eof.Types {
-		fmt.Println("t: ", t)
 		inputsHex := fmt.Sprintf("%02x", t[0])
 		outputsHex := fmt.Sprintf("%02x", t[1])
 		typeContents = typeContents + inputsHex + outputsHex
 	}
-	fmt.Println(">tc: ", typeContents)
 
 	codeContents := ""
 	for _, c := range eof.CodeSections {
 		codeContents = codeContents + c
 	}
 
-	eof_code = eof_code + versionHex + typesHeader + codeHeaders + dataHeader + terminator + typeContents + codeContents + eof.Data
+	if withTypes == false && len(eof.Types) == 1 {
+		eof_code = eof_code + versionHex + codeHeaders + dataHeader + terminator + codeContents + eof.Data
+	} else {
+		eof_code = eof_code + versionHex + typesHeader + codeHeaders + dataHeader + terminator + typeContents + codeContents + eof.Data
+	}
 	return eof_code
 }
 
@@ -87,7 +119,7 @@ func (eof *EOFObject) AddDefaultType() bool {
 	}
 }
 
-func ParseEOF(eof_code string) EOFObject {
+func ParseOldEOF(eof_code string) EOFObject {
 	version := int64(0)
 	versionHex := ""
 	eof_code = strings.ToLower(eof_code)

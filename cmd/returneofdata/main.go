@@ -60,8 +60,12 @@ func main() {
 
 	data_content := strings.Join(data[:], "")
 	code_contents := []string{strings.Join(code[:], "")}
-	types := [][]int64{}
 
-	eof_code := common.GenerateEOF(data_content, types, code_contents, false)
-	fmt.Println(eof_code)
+	eofObject := common.NewEOFObject()
+	eofObject.AddData(data_content)
+	for _, c := range code_contents {
+		eofObject.AddCode(c)
+	}
+
+	fmt.Println(eofObject.Code(false, false))
 }

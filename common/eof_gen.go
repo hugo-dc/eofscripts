@@ -5,6 +5,7 @@ import (
 	"strconv"
 )
 
+// TODO: This will be deleted
 func GenerateEOF(data string, types [][]int64, code []string, withTypes bool) string {
 	if len(data)%2 != 0 {
 		panic("Error: odd data size")
