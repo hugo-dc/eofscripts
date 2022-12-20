@@ -57,6 +57,7 @@ func main() {
 	}
 
 	// Store code in memory, chunk by chunk
+	opCodes := common.GetOpcodesByName()
 	var result []string
 	for i := 0; i < len(codeChunks); i++ {
 		chunk := codeChunks[i]
@@ -73,39 +74,28 @@ func main() {
 			if len(totalBitsHex)%2 != 0 {
 				totalBitsHex = "0" + totalBitsHex
 			}
-			result = append(result, common.Push1().AsHex()) // PUSH1
-			result = append(result, totalBitsHex)           // <totalBits>
-			result = append(result, common.Shl().AsHex())   // SHL
+			result = append(result, opCodes["PUSH1"].AsHex())
+			result = append(result, totalBitsHex) // <totalBits>
+			result = append(result, opCodes["SHL"].AsHex())
 		}
 
-		result = append(result, common.Push1().AsHex()) // PUSH1
+		result = append(result, opCodes["PUSH1"].AsHex())
 
 		offset := strconv.FormatInt(int64(i*32), 16)
 		if len(offset)%2 != 0 {
 			offset = "0" + offset
 		}
-		result = append(result, offset)                  // Offset
-		result = append(result, common.MStore().AsHex()) // MSTORE
+		result = append(result, offset) // Offset
+		result = append(result, opCodes["MSTORE"].AsHex())
 	}
 
-	result = append(result, common.Push1().AsHex()) // PUSH1
-	result = append(result, codelenhex)             // CodeLength (Offset end)
-	result = append(result, common.Push1().AsHex()) // PUSH1
+	result = append(result, opCodes["PUSH1"].AsHex())
+	result = append(result, codelenhex) // CodeLength (Offset end)
+	result = append(result, opCodes["PUSH1"].AsHex())
 
-	/*
-		if codelen < 32 {
-			initialOffset := strconv.FormatInt(int64(32-codelen), 16)
-
-			if len(initialOffset)%2 != 0 {
-				initialOffset = "0" + initialOffset
-			}
-			result = append(result, initialOffset) // Offset
-		} else {
-	*/
 	result = append(result, "00") // Offset
-	//}
-	result = append(result, common.Return().AsHex()) // RETURN
-	result = append(result, common.Stop().AsHex())   // STOP
+	result = append(result, opCodes["RETURN"].AsHex())
+	result = append(result, opCodes["STOP"].AsHex())
 
 	// Show result
 	fmt.Println(strings.Join(result[:], ""))

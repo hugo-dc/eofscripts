@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 )
@@ -36,7 +37,7 @@ func (eof *EOFObject) CodeNew(withTypes bool) string {
 }
 
 func (eof *EOFObject) Code(old bool, withTypes bool) string {
-	eof_code := "ef"
+	eof_code := "ef00"
 
 	typeId := cTypeId
 	codeId := cCodeId
@@ -48,7 +49,7 @@ func (eof *EOFObject) Code(old bool, withTypes bool) string {
 		dataId = cOldDataId
 	}
 
-	versionHex := fmt.Sprintf("%04x", eof.Version)
+	versionHex := fmt.Sprintf("%02x", eof.Version)
 	typesHeader := ""
 	if len(eof.Types) > 0 {
 		typesLengthHex := fmt.Sprintf("%04x", len(eof.Types)*2)
@@ -56,10 +57,15 @@ func (eof *EOFObject) Code(old bool, withTypes bool) string {
 	}
 
 	codeHeaders := ""
+	codeLengths := ""
+	numCodeSections := 0
 	for _, c := range eof.CodeSections {
 		codeLengthHex := fmt.Sprintf("%04x", len(c)/2)
-		codeHeaders = codeHeaders + codeId + codeLengthHex
+		codeLengths = codeLengths + codeLengthHex
+		numCodeSections += 1
 	}
+	numCodeSectionsHex := fmt.Sprintf("%04x", numCodeSections)
+	codeHeaders = codeId + numCodeSectionsHex + codeLengths
 
 	dataHeader := ""
 	if len(eof.Data) > 0 {
@@ -70,10 +76,13 @@ func (eof *EOFObject) Code(old bool, withTypes bool) string {
 	terminator := "00"
 
 	typeContents := ""
-	for _, t := range eof.Types {
+	for i, t := range eof.Types {
 		inputsHex := fmt.Sprintf("%02x", t[0])
 		outputsHex := fmt.Sprintf("%02x", t[1])
-		typeContents = typeContents + inputsHex + outputsHex
+
+		maxStackHeight := calculateMaxStack(i, eof.CodeSections[i], eof.Types)
+		maxStackHeightHex := fmt.Sprintf("%04x", maxStackHeight)
+		typeContents = typeContents + inputsHex + outputsHex + maxStackHeightHex
 	}
 
 	codeContents := ""
@@ -81,7 +90,7 @@ func (eof *EOFObject) Code(old bool, withTypes bool) string {
 		codeContents = codeContents + c
 	}
 
-	if withTypes == false && len(eof.Types) == 1 {
+	if withTypes == false && len(eof.Types) == 1 && old == true {
 		eof_code = eof_code + versionHex + codeHeaders + dataHeader + terminator + codeContents + eof.Data
 	} else {
 		eof_code = eof_code + versionHex + typesHeader + codeHeaders + dataHeader + terminator + typeContents + codeContents + eof.Data
@@ -117,6 +126,90 @@ func (eof *EOFObject) AddDefaultType() bool {
 	} else {
 		return false
 	}
+}
+
+func calculateMaxStack(funcId int, code string, types [][]int64) int64 {
+	stackHeights := map[int64]int64{}
+	startStackHeight := types[funcId][0]
+	maxStackHeight := startStackHeight
+	worklist := [][]int64{{0, startStackHeight}}
+
+	opCodes := GetOpcodesByNumber()
+
+	for {
+		ix := len(worklist) - 1
+		res := worklist[ix]
+		pos := res[0]
+		stackHeight := res[1]
+		worklist = worklist[:ix]
+
+		for {
+			if int(pos) >= (len(code) / 2) {
+				fmt.Println("Error: code is invalid")
+				return 0
+			}
+
+			op, _ := strconv.ParseInt(code[pos*2:pos*2+2], 16, 64)
+			opCode := opCodes[int(op)]
+
+			if _, ok := stackHeights[pos]; ok {
+				if stackHeight != stackHeights[pos] {
+					fmt.Println("Error: stack height mismatch for different paths")
+				} else {
+					break
+				}
+			} else {
+				stackHeights[pos] = stackHeight
+			}
+
+			stackHeightRequired := int64(opCode.StackInput)
+			stackHeightChange := int64(opCode.StackOutput - opCode.StackInput)
+
+			if opCode.Name == "CALLF" {
+				calledFuncId, _ := strconv.ParseInt(code[pos+1:pos+3], 16, 64)
+
+				stackHeightRequired += int64(types[calledFuncId][0])
+				stackHeightChange += int64(types[calledFuncId][1] - types[calledFuncId][0])
+			}
+
+			if stackHeight < stackHeightRequired {
+				fmt.Println("Error: stack underflow")
+				break
+			}
+
+			stackHeight += stackHeightChange
+			maxStackHeight = int64(math.Max(float64(maxStackHeight), float64(stackHeight)))
+
+			// jumps
+			if opCode.Name == "RJUMP" {
+				offset, _ := strconv.ParseInt(code[pos+1:pos+3], 16, 64)
+				pos += int64(opCode.Immediates) + 1 + int64(offset)
+			} else if opCode.Name == "RJUMPI" {
+				offset, _ := strconv.ParseInt(code[pos+1:pos+3], 16, 64)
+				worklist = append(worklist, []int64{pos + 3 + offset, stackHeight})
+				pos += int64(opCode.Immediates) + 1
+			} else if opCode.IsTerminating {
+				expectedHeight := 0
+				if opCode.Name == "RETF" {
+					expectedHeight = int(types[funcId][1])
+				}
+				if int(stackHeight) != expectedHeight {
+					fmt.Println("Error: Non-empty stack on terminating instruction")
+				}
+			} else {
+				pos += int64(opCode.Immediates) + 1
+			}
+		}
+
+		if maxStackHeight > 1024 {
+			fmt.Println("Error: max stack above limit")
+		}
+
+		if len(worklist) == 0 {
+			break
+		}
+	}
+	return maxStackHeight
 }
 
 func ParseOldEOF(eof_code string) EOFObject {

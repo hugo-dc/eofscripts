@@ -30,33 +30,35 @@ func main() {
 		code = common.GetBytes(code_input)
 	}
 
+	opCodes := common.GetOpcodesByName()
+
 	code_len_hex := common.IntToHex(int64(len(code) + 22)) // adds 12 counting the following opcodes and the EOF header
 
 	// Push data length
-	code = append(code, common.Push1().AsHex())
+	code = append(code, opCodes["PUSH1"].AsHex())
 	code = append(code, data_len_hex)
 
 	// Push data offset (eof_header_len + evm_bytecode_len)
-	code = append(code, common.Push1().AsHex())
+	code = append(code, opCodes["PUSH1"].AsHex())
 	code = append(code, code_len_hex)
 
 	// Push result offset (0)
-	code = append(code, common.Push1().AsHex())
+	code = append(code, opCodes["PUSH1"].AsHex())
 	code = append(code, "00")
 
 	// codecopy
-	code = append(code, common.CodeCopy().AsHex())
+	code = append(code, opCodes["CODECOPY"].AsHex())
 
 	// Push return size
-	code = append(code, common.Push1().AsHex())
+	code = append(code, opCodes["PUSH1"].AsHex())
 	code = append(code, data_len_hex)
 
 	// Push return offset (0)
-	code = append(code, common.Push1().AsHex())
+	code = append(code, opCodes["PUSH1"].AsHex())
 	code = append(code, "00")
 
 	// return
-	code = append(code, common.Return().AsHex())
+	code = append(code, opCodes["RETURN"].AsHex())
 
 	data_content := strings.Join(data[:], "")
 	code_contents := []string{strings.Join(code[:], "")}
