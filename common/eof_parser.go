@@ -68,10 +68,8 @@ func (eof *EOFObject) Code(old bool, withTypes bool) string {
 	codeHeaders = codeId + numCodeSectionsHex + codeLengths
 
 	dataHeader := ""
-	if len(eof.Data) > 0 {
-		dataLengthHex := fmt.Sprintf("%04x", len(eof.Data)/2)
-		dataHeader = dataHeader + dataId + dataLengthHex
-	}
+	dataLengthHex := fmt.Sprintf("%04x", len(eof.Data)/2)
+	dataHeader = dataHeader + dataId + dataLengthHex
 
 	terminator := "00"
 
@@ -93,6 +91,19 @@ func (eof *EOFObject) Code(old bool, withTypes bool) string {
 	if withTypes == false && len(eof.Types) == 1 && old == true {
 		eof_code = eof_code + versionHex + codeHeaders + dataHeader + terminator + codeContents + eof.Data
 	} else {
+		/*
+			fmt.Println("HEADER\n--------")
+			fmt.Println("magic:", eof_code)
+			fmt.Println("version:", versionHex)
+			fmt.Println("types:", typesHeader)
+			fmt.Println("codeHeaders:", codeHeaders)
+			fmt.Println("dataHeader:", dataHeader)
+			fmt.Println("terminator:", terminator)
+			fmt.Println("BODY\n--------")
+			fmt.Println("typesSection:", typeContents)
+			fmt.Println("codeSection:", codeContents)
+			fmt.Println("dataSection:", eof.Data)
+		*/
 		eof_code = eof_code + versionHex + typesHeader + codeHeaders + dataHeader + terminator + typeContents + codeContents + eof.Data
 	}
 	return eof_code
@@ -151,10 +162,10 @@ func calculateMaxStack(funcId int, code string, types [][]int64) int64 {
 
 			op, _ := strconv.ParseInt(code[pos*2:pos*2+2], 16, 64)
 			opCode := opCodes[int(op)]
-
 			if _, ok := stackHeights[pos]; ok {
 				if stackHeight != stackHeights[pos] {
 					fmt.Println("Error: stack height mismatch for different paths")
+					break
 				} else {
 					break
 				}
@@ -196,6 +207,7 @@ func calculateMaxStack(funcId int, code string, types [][]int64) int64 {
 				if int(stackHeight) != expectedHeight {
 					fmt.Println("Error: Non-empty stack on terminating instruction")
 				}
+				break
 			} else {
 				pos += int64(opCode.Immediates) + 1
 			}

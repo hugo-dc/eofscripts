@@ -20,6 +20,10 @@ func main() {
 		panic("Error: Code length is even")
 	}
 
+	if code[:2] == "0x" {
+		code = code[2:]
+	}
+
 	code_len := len(code) / 2
 
 	totalChunks := 1
@@ -58,7 +62,7 @@ func main() {
 				chunk = chunk + "00"
 			}
 		}
-		mstores += ", 0x" + chunk + ") "
+		mstores += ", 0x" + chunk + ")"
 
 	}
 

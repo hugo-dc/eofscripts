@@ -32,7 +32,7 @@ func main() {
 
 	opCodes := common.GetOpcodesByName()
 
-	code_len_hex := common.IntToHex(int64(len(code) + 22)) // adds 12 counting the following opcodes and the EOF header
+	code_len_hex := common.IntToHex(int64(len(code) + 12 + 19)) // adds 12 counting the following opcodes and the EOF header
 
 	// Push data length
 	code = append(code, opCodes["PUSH1"].AsHex())
