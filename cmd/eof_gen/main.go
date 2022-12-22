@@ -64,9 +64,11 @@ func main() {
 
 		if arg == "-o" {
 			oldCode = true
-		} else {
-			showTypes = true
 		}
+	}
+
+	if !oldCode {
+		showTypes = true
 	}
 
 	eofObject.AddData(data)

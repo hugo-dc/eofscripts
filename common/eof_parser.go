@@ -57,11 +57,13 @@ func (eof *EOFObject) Code(old bool, withTypes bool) string {
 	}
 
 	codeHeaders := ""
+	oldCodeHeaders := ""
 	codeLengths := ""
 	numCodeSections := 0
 	for _, c := range eof.CodeSections {
 		codeLengthHex := fmt.Sprintf("%04x", len(c)/2)
 		codeLengths = codeLengths + codeLengthHex
+		oldCodeHeaders = oldCodeHeaders + codeId + codeLengthHex
 		numCodeSections += 1
 	}
 	numCodeSectionsHex := fmt.Sprintf("%04x", numCodeSections)
@@ -89,7 +91,20 @@ func (eof *EOFObject) Code(old bool, withTypes bool) string {
 	}
 
 	if withTypes == false && len(eof.Types) == 1 && old == true {
-		eof_code = eof_code + versionHex + codeHeaders + dataHeader + terminator + codeContents + eof.Data
+		/*
+			fmt.Println("magic:", eof_code)
+			fmt.Println("version:", versionHex)
+			fmt.Println("oldCodeHeaders:", oldCodeHeaders)
+			fmt.Println("dataHeader:", dataHeader)
+			fmt.Println("terminator:", terminator)
+			fmt.Println("codeContents:", codeContents)
+			fmt.Println("eofData:", eof.Data)
+		*/
+		if len(eof.Data) > 0 {
+			eof_code = eof_code + versionHex + oldCodeHeaders + dataHeader + terminator + codeContents + eof.Data
+		} else {
+			eof_code = eof_code + versionHex + oldCodeHeaders + terminator + codeContents
+		}
 	} else {
 		fmt.Println("HEADER\n--------")
 		fmt.Println("magic:", eof_code)
