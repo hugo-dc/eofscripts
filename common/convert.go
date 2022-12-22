@@ -85,7 +85,7 @@ func opcode2evm(opcode string, immediate string) (string, error) {
 
 		// For >push2 a hexadecimal must be received as parameter
 		imm_hex := ""
-		if op.Code > 0x60 && op.Code <= 0x6f {
+		if op.Code > 0x60 && op.Code <= 0x7f {
 			if immediate[0:2] != "0x" {
 				return "", errors.New("hexadecimal value expected")
 			}
