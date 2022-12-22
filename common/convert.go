@@ -43,7 +43,8 @@ func opcode2evm(opcode string, immediate string) (string, error) {
 	op := opcodes[opcode]
 
 	if op.Name == "" {
-		return "", errors.New("Opcode not assigned")
+		errmsg := "Opcode not assigned: " + opcode
+		return "", errors.New(errmsg)
 	}
 
 	if immediate == "" && op.Immediates > 0 {
@@ -82,30 +83,47 @@ func opcode2evm(opcode string, immediate string) (string, error) {
 			return result, nil
 		}
 
-		imm, err := strconv.ParseInt(immediate, 10, 64)
-
-		if err != nil {
-			return "", err
-		}
-
+		// For >push2 a hexadecimal must be received as parameter
 		imm_hex := ""
-		if imm < 0 {
-			if op.Name != "RJUMP" && op.Name != "RJUMPI" {
-				return "", errors.New("Negative immediate only possible for RJUMP and RJUMPI")
+		if op.Code > 0x60 && op.Code <= 0x6f {
+			if immediate[0:2] != "0x" {
+				return "", errors.New("hexadecimal value expected")
+			}
+			immediate = immediate[2:]
+			totalBytes := op.Code - 0x5f
+
+			for {
+				if len(immediate)/2 == totalBytes {
+					break
+				}
+
+				immediate = "0" + immediate
+			}
+			imm_hex = immediate
+		} else {
+			imm, err := strconv.ParseInt(immediate, 10, 64)
+			if err != nil {
+				return "", err
 			}
 
-			imm_hex = strconv.FormatUint(uint64(imm), 16)
-			imm_hex = imm_hex[len(imm_hex)-op.Immediates*2:]
-		} else {
-			imm_hex = strconv.FormatInt(imm, 16)
-			if len(imm_hex)%2 != 0 {
-				imm_hex = "0" + imm_hex
-			}
-			for {
-				if len(imm_hex) < op.Immediates*2 {
-					imm_hex = "00" + imm_hex
-				} else {
-					break
+			if imm < 0 {
+				if op.Name != "RJUMP" && op.Name != "RJUMPI" {
+					return "", errors.New("Negative immediate only possible for RJUMP and RJUMPI")
+				}
+
+				imm_hex = strconv.FormatUint(uint64(imm), 16)
+				imm_hex = imm_hex[len(imm_hex)-op.Immediates*2:]
+			} else {
+				imm_hex = strconv.FormatInt(imm, 16)
+				if len(imm_hex)%2 != 0 {
+					imm_hex = "0" + imm_hex
+				}
+				for {
+					if len(imm_hex) < op.Immediates*2 {
+						imm_hex = "00" + imm_hex
+					} else {
+						break
+					}
 				}
 			}
 		}
@@ -120,8 +138,11 @@ func Mnem2Evm(mn string) string {
 	tokens := strings.Split(mn, " ")
 	result := ""
 
-	for i := 0; i < len(tokens); i++ {
-		token := tokens[i]
+	for _, token := range tokens {
+		token = strings.Trim(token, " ")
+		if token == "" {
+			continue
+		}
 		opcode := ""
 		immediate := ""
 		if strings.Contains(token, "(") {
