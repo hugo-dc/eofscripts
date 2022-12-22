@@ -22,11 +22,20 @@ func Evm2Mnem(bytecode string) string {
 		if op, ok := opcodes[int(code)]; ok {
 			result = result + op.Name
 
-			if op.Immediates > 0 {
+			if op.Immediates == 1 {
+				immediate := bytecode[i+2 : i+2+(op.Immediates*2)]
+				immediateInt, err := strconv.ParseInt(immediate, 16, 64)
+				immediate = strconv.Itoa(int(immediateInt))
+
+				if err != nil {
+					fmt.Println(err)
+				}
+				result = result + "(" + string(immediate) + ")"
+			} else if op.Immediates > 1 {
 				immediate := bytecode[i+2 : i+2+(op.Immediates*2)]
 				result = result + "(0x" + immediate + ")"
-				i += (op.Immediates * 2)
 			}
+			i += (op.Immediates * 2)
 		} else {
 			fmt.Println("Error: opcode " + "0x" + code_str + " not found")
 			return ""
