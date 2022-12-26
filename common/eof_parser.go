@@ -218,7 +218,7 @@ func calculateMaxStack(funcId int, code string, types [][]int64) int64 {
 					expectedHeight = int(types[funcId][1])
 				}
 				if int(stackHeight) != expectedHeight {
-					fmt.Println("Error: Non-empty stack on terminating instruction")
+					fmt.Println("Warning: Non-empty stack on terminating instruction")
 				}
 				break
 			} else {
