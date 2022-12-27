@@ -52,7 +52,12 @@ func (eof *EOFObject) Code(old bool, withTypes bool) string {
 	versionHex := fmt.Sprintf("%02x", eof.Version)
 	typesHeader := ""
 	if len(eof.Types) > 0 {
-		typesLengthHex := fmt.Sprintf("%04x", len(eof.Types)*2)
+		typesLengthHex := ""
+		if old {
+			typesLengthHex = fmt.Sprintf("%04x", len(eof.Types)*2)
+		} else {
+			typesLengthHex = fmt.Sprintf("%04x", len(eof.Types)*4)
+		}
 		typesHeader = typeId + typesLengthHex
 	}
 
@@ -80,9 +85,13 @@ func (eof *EOFObject) Code(old bool, withTypes bool) string {
 		inputsHex := fmt.Sprintf("%02x", t[0])
 		outputsHex := fmt.Sprintf("%02x", t[1])
 
-		maxStackHeight := calculateMaxStack(i, eof.CodeSections[i], eof.Types)
-		maxStackHeightHex := fmt.Sprintf("%04x", maxStackHeight)
-		typeContents = typeContents + inputsHex + outputsHex + maxStackHeightHex
+		if old {
+			typeContents = typeContents + inputsHex + outputsHex
+		} else {
+			maxStackHeight := calculateMaxStack(i, eof.CodeSections[i], eof.Types)
+			maxStackHeightHex := fmt.Sprintf("%04x", maxStackHeight)
+			typeContents = typeContents + inputsHex + outputsHex + maxStackHeightHex
+		}
 	}
 
 	codeContents := ""
@@ -206,10 +215,10 @@ func calculateMaxStack(funcId int, code string, types [][]int64) int64 {
 
 			// jumps
 			if opCode.Name == "RJUMP" {
-				offset, _ := strconv.ParseInt(code[pos+1:pos+3], 16, 64)
-				pos += int64(opCode.Immediates) + 1 + int64(offset)
+				offset, _ := strconv.ParseInt(code[pos*2+2:pos*2+4], 16, 64)
+				pos += (int64(opCode.Immediates) + 1 + int64(offset)) * 2
 			} else if opCode.Name == "RJUMPI" {
-				offset, _ := strconv.ParseInt(code[pos+1:pos+3], 16, 64)
+				offset, _ := strconv.ParseInt(code[pos*2+2:pos*2+4], 16, 64)
 				worklist = append(worklist, []int64{pos + 3 + offset, stackHeight})
 				pos += int64(opCode.Immediates) + 1
 			} else if opCode.IsTerminating {
