@@ -114,6 +114,7 @@ var opcodes = []OpCode{
 	{Name: "GASLIMIT", Code: 0x45, Immediates: 0, StackInput: 0, StackOutput: 1, IsTerminating: false},
 	{Name: "CHAINID", Code: 0x46, Immediates: 0, StackInput: 0, StackOutput: 1, IsTerminating: false},
 	{Name: "SELFBALANCE", Code: 0x47, Immediates: 0, StackInput: 0, StackOutput: 1, IsTerminating: false},
+	{Name: "BASEFEE", Code: 0x48, Immediates: 0, StackInput: 0, StackOutput: 1, IsTerminating: false},
 	{Name: "POP", Code: 0x50, Immediates: 0, StackInput: 1, StackOutput: 0, IsTerminating: false},
 	{Name: "MLOAD", Code: 0x51, Immediates: 0, StackInput: 1, StackOutput: 1, IsTerminating: false},
 	{Name: "MSTORE", Code: 0x52, Immediates: 0, StackInput: 2, StackOutput: 0, IsTerminating: false},
