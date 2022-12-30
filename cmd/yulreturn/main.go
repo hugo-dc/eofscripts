@@ -53,7 +53,11 @@ func main() {
 
 	mstores := ""
 	for i := 0; i < len(codeChunks); i++ {
-		mstores += fmt.Sprintf("mstore(%d", i*32)
+		if i > 0 {
+			mstores += fmt.Sprintf(" mstore(%d", i*32)
+		} else {
+			mstores += fmt.Sprintf("mstore(%d", i*32)
+		}
 
 		chunk := codeChunks[i]
 
