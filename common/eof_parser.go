@@ -176,12 +176,7 @@ func calculateMaxStack(funcId int, code string, types [][]int64) int64 {
 		stackHeight := res[1]
 		worklist = worklist[:ix]
 
-		for {
-			if int(pos) >= (len(code) / 2) {
-				fmt.Println("Error: code is invalid")
-				return 0
-			}
-
+		for int(pos*2) < len(code) {
 			op, _ := strconv.ParseInt(code[pos*2:pos*2+2], 16, 64)
 			opCode := opCodes[int(op)]
 			if _, ok := stackHeights[pos]; ok {
