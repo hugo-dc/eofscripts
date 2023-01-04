@@ -105,7 +105,7 @@ var opcodes = []OpCode{
 	{Name: "EXTCODECOPY", Code: 0x3c, Immediates: 0, StackInput: 4, StackOutput: 0, IsTerminating: false},
 	{Name: "RETURNDATASIZE", Code: 0x3d, Immediates: 0, StackInput: 0, StackOutput: 1, IsTerminating: false},
 	{Name: "RETURNDATACOPY", Code: 0x3e, Immediates: 0, StackInput: 3, StackOutput: 0, IsTerminating: false},
-	{Name: "EXTCODEHASH", Code: 0x3f, Immediates: 0, StackInput: 1, StackOutput: 0, IsTerminating: false},
+	{Name: "EXTCODEHASH", Code: 0x3f, Immediates: 0, StackInput: 1, StackOutput: 1, IsTerminating: false},
 	{Name: "BLOCKHASH", Code: 0x40, Immediates: 0, StackInput: 1, StackOutput: 1, IsTerminating: false},
 	{Name: "COINBASE", Code: 0x41, Immediates: 0, StackInput: 0, StackOutput: 1, IsTerminating: false},
 	{Name: "TIMESTAMP", Code: 0x42, Immediates: 0, StackInput: 0, StackOutput: 1, IsTerminating: false},
