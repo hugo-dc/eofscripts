@@ -13,44 +13,6 @@ type OpCode struct {
 	IsTerminating bool
 }
 
-/*
-func Stop() OpCode {
-	return OpCode{
-		Code: 0x00,
-	}
-}
-
-func CodeCopy() OpCode {
-	return OpCode{
-		Code: 0x39,
-	}
-}
-
-func MStore() OpCode {
-	return OpCode{
-		Code: 0x52,
-	}
-}
-
-func Push1() OpCode {
-	return OpCode{
-		Code: 0x60,
-	}
-}
-
-func Return() OpCode {
-	return OpCode{
-		Code: 0xf3,
-	}
-}
-
-func Shl() OpCode {
-	return OpCode{
-		Code: 0x1b,
-	}
-}
-*/
-
 func (op OpCode) AsHex() string {
 	opValue := strconv.FormatInt(int64(op.Code), 16)
 

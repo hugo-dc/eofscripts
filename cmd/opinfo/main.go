@@ -15,6 +15,9 @@ func showUsage() {
 	fmt.Println("    --hex\tShow opcode hexadecimal value")
 	fmt.Println("    --inputs\tShow required stack items")
 	fmt.Println("    --outputs\tShow pushed stack items")
+	fmt.Println("    --ispush\tReturns true if opcode is a PUSH opcode")
+	fmt.Println("    --immediates\tReturns the number of bytes the opcodes requires as immediates")
+	fmt.Println("    --is-terminating\tReturns true if opcode is a terminating opcode")
 }
 
 func main() {
@@ -70,5 +73,21 @@ func main() {
 	if option == "--outputs" {
 		fmt.Println(opcode.StackOutput)
 	}
-
+	if option == "--ispush" {
+		if opcode.Code >= 0x60 && opcode.Code <= 0x7f {
+			fmt.Println("true")
+		} else {
+			fmt.Println("false")
+		}
+	}
+	if option == "--immediates" {
+		fmt.Println(opcode.Immediates)
+	}
+	if option == "--is-terminating" {
+		if opcode.IsTerminating {
+			fmt.Println("true")
+		} else {
+			fmt.Println("false")
+		}
+	}
 }
