@@ -23,6 +23,10 @@ func (op OpCode) AsHex() string {
 	return opValue
 }
 
+func (op OpCode) IsPush() bool {
+	return op.Code >= 0x60 && op.Code <= 0x7f
+}
+
 var opcodes = []OpCode{
 	{Name: "STOP", Code: 0x00, Immediates: 0, StackInput: 0, StackOutput: 0, IsTerminating: true},
 	{Name: "ADD", Code: 0x01, Immediates: 0, StackInput: 2, StackOutput: 1, IsTerminating: false},
@@ -163,7 +167,7 @@ var opcodes = []OpCode{
 	{Name: "LOG3", Code: 0xa3, Immediates: 0, StackInput: 5, StackOutput: 0, IsTerminating: false},
 	{Name: "LOG4", Code: 0xa4, Immediates: 0, StackInput: 6, StackOutput: 0, IsTerminating: false},
 	{Name: "CALLF", Code: 0xb0, Immediates: 2, StackInput: 0, StackOutput: 0, IsTerminating: false},
-	{Name: "RETF", Code: 0xb1, Immediates: 0, StackInput: 0, StackOutput: 0, IsTerminating: false},
+	{Name: "RETF", Code: 0xb1, Immediates: 0, StackInput: 0, StackOutput: 0, IsTerminating: true},
 	{Name: "JUMPF", Code: 0xb2, Immediates: 2, StackInput: 0, StackOutput: 0, IsTerminating: false},
 	{Name: "CREATE", Code: 0xf0, Immediates: 0, StackInput: 3, StackOutput: 1, IsTerminating: false},
 	{Name: "CALL", Code: 0xf1, Immediates: 0, StackInput: 7, StackOutput: 1, IsTerminating: false},
@@ -172,7 +176,6 @@ var opcodes = []OpCode{
 	{Name: "DELEGATECALL", Code: 0xf4, Immediates: 0, StackInput: 6, StackOutput: 1, IsTerminating: false},
 	{Name: "CREATE2", Code: 0xf5, Immediates: 0, StackInput: 4, StackOutput: 1, IsTerminating: false},
 	{Name: "STATICCALL", Code: 0xfa, Immediates: 0, StackInput: 6, StackOutput: 1, IsTerminating: false},
-	{Name: "RETF", Code: 0xfc, Immediates: 0, StackInput: 0, StackOutput: 0, IsTerminating: true},
 	{Name: "REVERT", Code: 0xfd, Immediates: 0, StackInput: 2, StackOutput: 0, IsTerminating: true},
 	{Name: "INVALID", Code: 0xfe, Immediates: 0, StackInput: 0, StackOutput: 0, IsTerminating: true},
 	{Name: "SELFDESTRUCT", Code: 0xff, Immediates: 0, StackInput: 1, StackOutput: 0, IsTerminating: true},

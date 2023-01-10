@@ -176,11 +176,12 @@ func calculateMaxStack(funcId int, code string, types [][]int64) int64 {
 		stackHeight := res[1]
 		worklist = worklist[:ix]
 
+	outer:
 		for int(pos*2) < len(code) {
 			op, _ := strconv.ParseInt(code[pos*2:pos*2+2], 16, 64)
 			opCode := opCodes[int(op)]
-			if _, ok := stackHeights[pos]; ok {
-				if stackHeight != stackHeights[pos] {
+			if exp, ok := stackHeights[pos]; ok {
+				if stackHeight != exp {
 					fmt.Println("Error: stack height mismatch for different paths")
 					break
 				} else {
@@ -193,41 +194,55 @@ func calculateMaxStack(funcId int, code string, types [][]int64) int64 {
 			stackHeightRequired := int64(opCode.StackInput)
 			stackHeightChange := int64(opCode.StackOutput - opCode.StackInput)
 
-			if opCode.Name == "CALLF" {
-				calledFuncId, _ := strconv.ParseInt(code[pos+1:pos+3], 16, 64)
-
-				stackHeightRequired += int64(types[calledFuncId][0])
-				stackHeightChange += int64(types[calledFuncId][1] - types[calledFuncId][0])
+			if stackHeightRequired > stackHeight {
+				fmt.Println("stack underflow")
+				break
 			}
 
-			if stackHeight < stackHeightRequired {
-				fmt.Println("Error: stack underflow")
+			if (1024 + stackHeightChange) < stackHeight {
+				fmt.Println("stack overflow")
 				break
 			}
 
 			stackHeight += stackHeightChange
-			maxStackHeight = int64(math.Max(float64(maxStackHeight), float64(stackHeight)))
+			switch {
+			case opCode.Name == "CALLF":
+				calledFuncId, _ := strconv.ParseInt(code[pos*2+2:pos*2+6], 16, 64)
+				stackHeightRequired += int64(types[calledFuncId][0])
+				stackHeightChange += int64(types[calledFuncId][1] - types[calledFuncId][0])
 
-			// jumps
-			if opCode.Name == "RJUMP" {
-				offset, _ := strconv.ParseInt(code[pos*2+2:pos*2+4], 16, 64)
+				if stackHeightRequired > stackHeight {
+					fmt.Println("stack underflow")
+					break
+				}
+
+				if (1024 + stackHeightChange) < stackHeight {
+					fmt.Println("stack overflow")
+					break
+				}
+				stackHeight += stackHeightChange
+				pos += 3
+			case opCode.Name == "RETF":
+				if int64(types[funcId][1]) != stackHeight {
+					fmt.Printf("Wrong number of outputs (want:%d, got: %d)", types[funcId][1], stackHeight)
+				}
+				break outer
+			case opCode.Name == "RJUMP":
+				offset, _ := strconv.ParseInt(code[pos*2+2:pos*2+6], 16, 64)
 				pos += (int64(opCode.Immediates) + 1 + int64(offset)) * 2
-			} else if opCode.Name == "RJUMPI" {
-				offset, _ := strconv.ParseInt(code[pos*2+2:pos*2+4], 16, 64)
+			case opCode.Name == "RJUMPI":
+				offset, _ := strconv.ParseInt(code[pos*2+2:pos*2+6], 16, 64)
 				worklist = append(worklist, []int64{pos + 3 + offset, stackHeight})
 				pos += int64(opCode.Immediates) + 1
-			} else if opCode.IsTerminating {
-				expectedHeight := 0
-				if opCode.Name == "RETF" {
-					expectedHeight = int(types[funcId][1])
+			default:
+				if opCode.IsTerminating {
+					break outer
+				} else {
+					pos += int64(opCode.Immediates) + 1
 				}
-				if int(stackHeight) != expectedHeight {
-					fmt.Println("Warning: Non-empty stack on terminating instruction")
-				}
-				break
-			} else {
-				pos += int64(opCode.Immediates) + 1
 			}
+
+			maxStackHeight = int64(math.Max(float64(maxStackHeight), float64(stackHeight)))
 		}
 
 		if maxStackHeight > 1024 {
