@@ -33,7 +33,7 @@ func GetBytes(data string) []string {
 func IntToHex(number int64) string {
 	hex := strconv.FormatInt(number, 16)
 
-	if len(hex) != 2 {
+	if len(hex)%2 != 0 {
 		hex = "0" + hex
 	}
 	return hex

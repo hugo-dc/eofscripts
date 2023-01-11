@@ -32,10 +32,12 @@ func main() {
 
 	opCodes := common.GetOpcodesByName()
 
-	code_len_hex := common.IntToHex(int64(len(code) + 12 + 19)) // adds 12 counting the following opcodes and the EOF header
-
 	// Push data length
-	code = append(code, opCodes["PUSH1"].AsHex())
+	pushLen := len(data_len_hex) / 2
+	pushOp := fmt.Sprintf("PUSH%d", pushLen)
+
+	code_len_hex := common.IntToHex(int64(len(code) + 10 + (pushLen * 2) + 19)) // adds 10 counting the following opcodes and the EOF header
+	code = append(code, opCodes[pushOp].AsHex())
 	code = append(code, data_len_hex)
 
 	// Push data offset (eof_header_len + evm_bytecode_len)
@@ -50,7 +52,7 @@ func main() {
 	code = append(code, opCodes["CODECOPY"].AsHex())
 
 	// Push return size
-	code = append(code, opCodes["PUSH1"].AsHex())
+	code = append(code, opCodes[pushOp].AsHex())
 	code = append(code, data_len_hex)
 
 	// Push return offset (0)
