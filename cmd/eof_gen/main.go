@@ -20,7 +20,9 @@ func main() {
 	showTypes := false
 	oldCode := false
 	eofObject := common.NewEOFObject()
+	fmt.Println(">>> args: ", os.Args)
 	for _, arg := range os.Args {
+		fmt.Println("arg:", arg, len(arg))
 		if arg[:2] == "d:" {
 			data = arg[2:]
 		}

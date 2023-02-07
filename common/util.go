@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/big"
 	"strconv"
+	"strings"
 
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -13,6 +14,7 @@ import (
 
 // TODO: Change name to GetHexBytes
 func GetBytes(data string) []string {
+	data = strings.Trim(data, " ")
 	if data[:2] == "0x" {
 		data = data[2:]
 	}

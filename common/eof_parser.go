@@ -1,6 +1,7 @@
 package common
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -100,15 +101,6 @@ func (eof *EOFObject) Code(old bool, withTypes bool) string {
 	}
 
 	if withTypes == false && len(eof.Types) == 1 && old == true {
-		/*
-			fmt.Println("magic:", eof_code)
-			fmt.Println("version:", versionHex)
-			fmt.Println("oldCodeHeaders:", oldCodeHeaders)
-			fmt.Println("dataHeader:", dataHeader)
-			fmt.Println("terminator:", terminator)
-			fmt.Println("codeContents:", codeContents)
-			fmt.Println("eofData:", eof.Data)
-		*/
 		if len(eof.Data) > 0 {
 			eof_code = eof_code + versionHex + oldCodeHeaders + dataHeader + terminator + codeContents + eof.Data
 		} else {
@@ -178,10 +170,16 @@ func calculateMaxStack(funcId int, code string, types [][]int64) int64 {
 
 	outer:
 		for int(pos*2) < len(code) {
+			if pos < 0 {
+				fmt.Println("Position out of bounds: ", pos)
+				break
+			}
 			op, _ := strconv.ParseInt(code[pos*2:pos*2+2], 16, 64)
 			opCode := opCodes[int(op)]
+			fmt.Println(pos, opCode)
 			if exp, ok := stackHeights[pos]; ok {
 				if stackHeight != exp {
+					fmt.Println("stackHeight:", stackHeight, "exp:", exp)
 					fmt.Println("Error: stack height mismatch for different paths")
 					break
 				} else {
@@ -195,6 +193,7 @@ func calculateMaxStack(funcId int, code string, types [][]int64) int64 {
 			stackHeightChange := int64(opCode.StackOutput - opCode.StackInput)
 
 			if stackHeightRequired > stackHeight {
+				fmt.Println("stackHeightRequired:", stackHeightRequired, "stackHeight:", stackHeight)
 				fmt.Println("stack underflow")
 				break
 			}
@@ -207,7 +206,15 @@ func calculateMaxStack(funcId int, code string, types [][]int64) int64 {
 			stackHeight += stackHeightChange
 			switch {
 			case opCode.Name == "CALLF":
+				if int(pos*2+6) > len(code) {
+					fmt.Println("truncated CALLF")
+					break
+				}
 				calledFuncId, _ := strconv.ParseInt(code[pos*2+2:pos*2+6], 16, 64)
+				if int(calledFuncId) >= len(types) {
+					fmt.Println("invalid function id")
+					break
+				}
 				stackHeightRequired += int64(types[calledFuncId][0])
 				stackHeightChange += int64(types[calledFuncId][1] - types[calledFuncId][0])
 
@@ -228,12 +235,55 @@ func calculateMaxStack(funcId int, code string, types [][]int64) int64 {
 				}
 				break outer
 			case opCode.Name == "RJUMP":
+				if int(pos)*2+6 >= len(code) {
+					fmt.Println("Error: Truncted RJUMP")
+					break
+				}
 				offset, _ := strconv.ParseInt(code[pos*2+2:pos*2+6], 16, 64)
-				pos += (int64(opCode.Immediates) + 1 + int64(offset)) * 2
+				pos += (int64(opCode.Immediates) + 1 + int64(offset))
 			case opCode.Name == "RJUMPI":
+				if int(pos)*2+6 >= len(code) {
+					fmt.Println("Error: Truncted RJUMPI")
+					break
+				}
+
 				offset, _ := strconv.ParseInt(code[pos*2+2:pos*2+6], 16, 64)
+
+				if offset > 32767 {
+					offset = ((65535 - offset) + 1) * -1
+				}
+
 				worklist = append(worklist, []int64{pos + 3 + offset, stackHeight})
+				fmt.Println(code[pos*2+2 : pos*2+6])
 				pos += int64(opCode.Immediates) + 1
+			case opCode.Name == "RJUMPV":
+				if int(pos)*2+4 >= len(code) {
+					fmt.Println("Error: truncated RJUMPV")
+					break
+				}
+				count, _ := strconv.ParseInt(code[pos*2+2:pos*2+4], 16, 64)
+				fmt.Println("\tcount:", count)
+
+				pos += 2
+				fmt.Println(pos*2+count*2, len(code))
+				if int(pos)*2+int(count)*2 >= len(code) {
+					fmt.Println("Error: truncated RJUMPV.")
+					break
+				}
+				for i := 0; i < int(count); i++ {
+					offset, _ := strconv.ParseInt(code[int(pos)*2+4*i:int(pos)*2+4*i+4], 16, 64)
+
+					if offset > 32767 {
+						offset = ((65535 - offset) + 1) * -1
+					}
+
+					fmt.Println("\toffset:", offset)
+					fmt.Println("\twE:", pos+2*count+offset)
+					worklist = append(worklist, []int64{pos + 2*count + offset, stackHeight})
+				}
+				fmt.Println("\tcode:", code[pos*2:])
+				pos += 2 * count
+				fmt.Println("\tcode:", code[pos*2:])
 			default:
 				if opCode.IsTerminating {
 					break outer
@@ -253,7 +303,137 @@ func calculateMaxStack(funcId int, code string, types [][]int64) int64 {
 			break
 		}
 	}
+	fmt.Println(">> heights:", len(stackHeights))
 	return maxStackHeight
+}
+
+func ParseEOF(eof_code string) (EOFObject, error) {
+	version := int64(0)
+	versionHex := ""
+	eof_code = strings.ToLower(eof_code)
+
+	codeHeaders := []int64{}
+	typesLength := int64(0)
+	types := [][]int64{}
+	dataLength := int64(0)
+	dataContent := ""
+
+	result := NewEOFObject()
+
+	i := 0
+	for {
+		if i+2 > len(eof_code) {
+			break
+		}
+
+		b := eof_code[i : i+2]
+
+		if versionHex == "" && b != "ef" {
+			return result, errors.New("Invalid EOF code")
+		}
+
+		if versionHex == "" && b == "ef" {
+			versionHex = eof_code[i+2 : i+6]
+			err := errors.New("")
+			version, err = strconv.ParseInt(versionHex, 16, 64)
+
+			if err != nil {
+				return result, errors.New("Invalid version")
+			}
+			result.Version = version
+			i += 4
+		}
+
+		if b == "01" {
+			typesLengthHex := eof_code[i+2 : i+6]
+			err := errors.New("")
+			typesLength, err = strconv.ParseInt(typesLengthHex, 16, 64)
+
+			if err != nil {
+				return result, errors.New("Invalid types length")
+			}
+			i += 4
+		}
+
+		if b == "02" {
+			codeSectionsTotalHex := eof_code[i+2 : i+6]
+			codeSectionsTotal, err := strconv.ParseInt(codeSectionsTotalHex, 16, 64)
+
+			if err != nil {
+				return result, errors.New("Invalid code sections total")
+			}
+
+			i += 6
+			for j := 0; j < int(codeSectionsTotal); j++ {
+				codeLenHex := eof_code[i : i+4]
+				codeLen, err := strconv.ParseInt(codeLenHex, 16, 64)
+
+				if err != nil {
+					return result, errors.New("Invalid code section length")
+				}
+
+				codeHeaders = append(codeHeaders, codeLen)
+				i += 4
+			}
+			i -= 2
+		}
+
+		if b == "03" {
+			err := errors.New("")
+			dataLengthHex := eof_code[i+2 : i+6]
+			dataLength, err = strconv.ParseInt(dataLengthHex, 16, 64)
+
+			if err != nil {
+				return result, errors.New("Invalid data section length")
+			}
+
+			i += 4
+		}
+
+		if b == "00" {
+			for j := 0; j < int(typesLength); j += 4 {
+				inputsHex := eof_code[i+2 : i+4]
+				inputs, err := strconv.ParseInt(inputsHex, 16, 64)
+
+				if err != nil {
+					return result, errors.New("Invalid type input")
+				}
+
+				outputsHex := eof_code[i+4 : i+6]
+				outputs, err := strconv.ParseInt(outputsHex, 16, 64)
+
+				if err != nil {
+					return result, errors.New("Invalid type output")
+				}
+
+				maxStackHex := eof_code[i+6 : i+10]
+				maxStack, err := strconv.ParseInt(maxStackHex, 16, 64)
+
+				if err != nil {
+					return result, errors.New("Invalid Max Stack Height")
+				}
+
+				types = append(types, []int64{inputs, outputs, maxStack})
+				i += 8
+			}
+			i += 2
+
+			// Extract code
+			for j, ch := range codeHeaders {
+				code := eof_code[i : i+int(ch)*2]
+				result.AddCodeWithType(code, types[j])
+				i += int(ch) * 2
+			}
+
+			// Extract data
+			dataContent = eof_code[i : i+int(dataLength)*2]
+			result.Data = dataContent
+			i += int(dataLength) * 2
+		}
+		i += 2
+	}
+
+	return result, nil
 }
 
 func ParseOldEOF(eof_code string) EOFObject {

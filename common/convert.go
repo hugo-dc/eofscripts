@@ -32,6 +32,9 @@ func Evm2Mnem(bytecode string) string {
 				}
 				result = result + "(" + string(immediate) + ")"
 			} else if op.Immediates > 1 {
+				fmt.Println("op.Code:", op.Code)
+				fmt.Println("op.Name:", op.Name)
+				fmt.Println("op.Immediates:", op.Immediates)
 				immediate := bytecode[i+2 : i+2+(op.Immediates*2)]
 				result = result + "(0x" + immediate + ")"
 			}
@@ -71,24 +74,22 @@ func opcode2evm(opcode string, immediate string) (string, error) {
 
 	if immediate != "" {
 		if op.Name == "RJUMPV" {
-			if immediate[:2] != "0x" {
-				return "", errors.New("Immediate must be a hexadecimal number")
-			}
-			if len(immediate) < 8 {
-				return "", errors.New("Minimum immediate length 6")
+			values := strings.Split(immediate, ",")
+			count := len(values)
+			result += fmt.Sprintf("%02x", count)
+			for _, ro := range values {
+				relativeOffset, err := strconv.ParseInt(ro, 10, 64)
+
+				if err != nil {
+					return "", errors.New("Error parsing RJUMPV relative offset")
+				}
+
+				if relativeOffset < 0 {
+					relativeOffset = 65535 - (relativeOffset * -1) + 1
+				}
+				result += fmt.Sprintf("%04x", relativeOffset)
 			}
 
-			count, err := strconv.ParseInt(immediate[2:4], 10, 64)
-
-			if err != nil {
-				return "", err
-			}
-
-			if count != int64(len(immediate[4:])/4) {
-				return "", errors.New("count does not match total relative offsets")
-			}
-
-			result = result + immediate[2:]
 			return result, nil
 		}
 

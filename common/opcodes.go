@@ -93,6 +93,7 @@ var opcodes = []OpCode{
 	{Name: "MSIZE", Code: 0x59, Immediates: 0, StackInput: 0, StackOutput: 1, IsTerminating: false},
 	{Name: "GAS", Code: 0x5a, Immediates: 0, StackInput: 0, StackOutput: 1, IsTerminating: false},
 	{Name: "JUMPDEST", Code: 0x5b, Immediates: 0, StackInput: 0, StackOutput: 0, IsTerminating: false},
+	{Name: "NOP", Code: 0x5b, Immediates: 0, StackInput: 0, StackOutput: 0, IsTerminating: false},
 	{Name: "RJUMP", Code: 0x5c, Immediates: 2, StackInput: 0, StackOutput: 0, IsTerminating: false},
 	{Name: "RJUMPI", Code: 0x5d, Immediates: 2, StackInput: 1, StackOutput: 0, IsTerminating: false},
 	{Name: "RJUMPV", Code: 0x5e, Immediates: 2, StackInput: 1, StackOutput: 0, IsTerminating: false},
