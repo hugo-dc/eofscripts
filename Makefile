@@ -1,5 +1,5 @@
 all: build install
-build: build-idcost build-returnevm build-returneofdata build-deploy build-call build-eof_gen build-eof_mod build-eof_upd build-yulreturn build-gentruncpush build-createaddress build-createaddress2 build-mnem2evm build-evm2mnem build-opinfo build-eof_dasm
+build: build-idcost build-returnevm build-returneofdata build-deploy build-call build-eof_gen build-eof_mod build-eof_upd build-yulreturn build-gentruncpush build-createaddress build-createaddress2 build-mnem2evm build-evm2mnem build-opinfo build-oplist build-eof_dasm
 build-idcost:
 	go build -o ./build/ ./cmd/idcost
 build-returnevm:
@@ -30,6 +30,8 @@ build-evm2mnem:
 	go build -o ./build/ ./cmd/evm2mnem
 build-opinfo:
 	go build -o ./build/ ./cmd/opinfo
+build-oplist:
+	go build -o ./build/ ./cmd/oplist
 build-eof_dasm:
 	go build -o ./build/ ./cmd/eof_dasm
 install:
