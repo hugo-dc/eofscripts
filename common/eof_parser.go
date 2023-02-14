@@ -179,7 +179,7 @@ func calculateMaxStack(funcId int, code string, types [][]int64) int64 {
 			fmt.Println(pos, opCode)
 			if exp, ok := stackHeights[pos]; ok {
 				if stackHeight != exp {
-					fmt.Println("stackHeight:", stackHeight, "exp:", exp)
+					fmt.Println("stackHeight:", stackHeight, "exp:", exp, "at pos", pos)
 					fmt.Println("Error: stack height mismatch for different paths")
 					break
 				} else {
@@ -235,14 +235,14 @@ func calculateMaxStack(funcId int, code string, types [][]int64) int64 {
 				}
 				break outer
 			case opCode.Name == "RJUMP":
-				if int(pos)*2+6 >= len(code) {
+				if int(pos)*2+6 > len(code) {
 					fmt.Println("Error: Truncted RJUMP")
 					break
 				}
 				offset, _ := strconv.ParseInt(code[pos*2+2:pos*2+6], 16, 64)
 				pos += (int64(opCode.Immediates) + 1 + int64(offset))
 			case opCode.Name == "RJUMPI":
-				if int(pos)*2+6 >= len(code) {
+				if int(pos)*2+6 > len(code) {
 					fmt.Println("Error: Truncted RJUMPI")
 					break
 				}
@@ -257,7 +257,7 @@ func calculateMaxStack(funcId int, code string, types [][]int64) int64 {
 				fmt.Println(code[pos*2+2 : pos*2+6])
 				pos += int64(opCode.Immediates) + 1
 			case opCode.Name == "RJUMPV":
-				if int(pos)*2+4 >= len(code) {
+				if int(pos)*2+4 > len(code) {
 					fmt.Println("Error: truncated RJUMPV")
 					break
 				}
@@ -266,7 +266,7 @@ func calculateMaxStack(funcId int, code string, types [][]int64) int64 {
 
 				pos += 2
 				fmt.Println(pos*2+count*2, len(code))
-				if int(pos)*2+int(count)*2 >= len(code) {
+				if int(pos)*2+int(count)*2 > len(code) {
 					fmt.Println("Error: truncated RJUMPV.")
 					break
 				}
