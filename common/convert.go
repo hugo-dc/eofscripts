@@ -101,7 +101,6 @@ func opcode2evm(opcode string, immediate string) (OpCall, error) {
 					opCall.Immediates = append(opCall.Immediates, Immediate{Type: Value, Immediate: fmt.Sprintf("%04x", relativeOffset)})
 				}
 			}
-
 			return opCall, nil
 		}
 
@@ -122,6 +121,7 @@ func opcode2evm(opcode string, immediate string) (OpCall, error) {
 				immediate = "0" + immediate
 			}
 			imm_hex = immediate
+			opCall.Immediates = append(opCall.Immediates, Immediate{Type: Value, Immediate: imm_hex})
 		} else {
 			imm, err := strconv.ParseInt(immediate, 10, 64)
 			if err != nil {
@@ -186,7 +186,6 @@ func Mnem2Evm(mn string) string {
 			return ""
 		}
 		evm = append(evm, opCall)
-
 		pos = pos + 1 + opCall.OpCode.Immediates
 	}
 
