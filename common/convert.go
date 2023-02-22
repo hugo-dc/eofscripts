@@ -47,11 +47,17 @@ func Evm2Mnem(bytecode string) string {
 				}
 				result = result + "(" + string(immediate) + ")"
 			} else if op.Immediates > 1 {
-				fmt.Println("op.Code:", op.Code)
-				fmt.Println("op.Name:", op.Name)
-				fmt.Println("op.Immediates:", op.Immediates)
 				immediate := bytecode[i+2 : i+2+(op.Immediates*2)]
-				result = result + "(0x" + immediate + ")"
+				imm, err := strconv.ParseInt(immediate, 16, 64)
+
+				if err != nil {
+					result = result + "(0x" + immediate + ")"
+				} else {
+					if imm > 32767 {
+						imm = ((65535 - imm) + 1) * -1
+					}
+					result = result + "(" + strconv.Itoa(int(imm)) + ")"
+				}
 			}
 			i += (op.Immediates * 2)
 		} else {
