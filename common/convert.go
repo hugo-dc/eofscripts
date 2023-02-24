@@ -22,6 +22,60 @@ type OpCall struct {
 	Immediates []Immediate
 }
 
+func (op OpCall) ToBytecode() (string, error) {
+	bytecode := op.OpCode.AsHex()
+
+	for _, im := range op.Immediates {
+		if im.Type == Label {
+			return "", errors.New("Not expected label " + im.Immediate)
+		}
+
+		bytecode += im.Immediate
+	}
+
+	return bytecode, nil
+}
+
+func DescribeBytecode(bytecode string) ([]OpCall, error) {
+	result := make([]OpCall, 0)
+	opcodes := GetOpcodesByNumber()
+
+	for i := 0; i < len(bytecode); i += 2 {
+		code_str := bytecode[i:(i + 2)]
+		code, err := strconv.ParseInt(code_str, 16, 64)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if op, ok := opcodes[int(code)]; ok {
+			opCall := OpCall{OpCode: op, Immediates: make([]Immediate, 0)}
+
+			if op.Name == "" {
+				return nil, errors.New("Opcode not found")
+			}
+
+			if op.Immediates > 0 {
+				immediate := bytecode[i+2 : i+2+(op.Immediates*2)]
+				immediateInt, err := strconv.ParseInt(immediate, 16, 64)
+
+				if err != nil {
+					return nil, err
+				}
+				immediate = fmt.Sprintf("%0*x", op.Immediates*2, immediateInt)
+				opCall.Immediates = append(opCall.Immediates, Immediate{Type: Value, Immediate: immediate})
+			}
+			result = append(result, opCall)
+
+			i += op.Immediates * 2
+		} else {
+			return nil, errors.New("Opcode not found")
+		}
+	}
+
+	return result, nil
+}
+
 func Evm2Mnem(bytecode string) string {
 	result := ""
 	opcodes := GetOpcodesByNumber()
