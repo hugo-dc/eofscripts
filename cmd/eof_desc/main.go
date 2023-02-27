@@ -47,7 +47,7 @@ func main() {
 		fmt.Println(fmt.Sprintf("  %04x", len(v)/2), "# Code section ", i, ",", len(v)/2, " bytes")
 	}
 
-	fmt.Println(fmt.Sprintf("03%04x", len(eofObject.Data)), "# Data section length (", len(eofObject.Data)/2, ")")
+	fmt.Println(fmt.Sprintf("03%04x", len(eofObject.Data)/2), "# Data section length (", len(eofObject.Data)/2, ")")
 	fmt.Println("    00", "# Terminator (end of header)")
 
 	for i, v := range eofObject.Types {
