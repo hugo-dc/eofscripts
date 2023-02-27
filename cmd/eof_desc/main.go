@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"strconv"
 
 	"github.com/hugo-dc/ethscripts/common"
 )
@@ -40,7 +39,7 @@ func main() {
 	}
 
 	// Print the EOF object
-	fmt.Println("EF00"+strconv.Itoa(int(eofObject.Version)), " # Magic and Version (", eofObject.Version, ")")
+	fmt.Println("EF00"+fmt.Sprintf("%02x", eofObject.Version), "# Magic and Version (", eofObject.Version, ")")
 	fmt.Println(fmt.Sprintf("01%04x", len(eofObject.Types)*4), "# Types length (", len(eofObject.Types)*4, ")")
 	fmt.Println(fmt.Sprintf("02%04x", len(eofObject.CodeSections)), "# Total code sections (", len(eofObject.CodeSections), ")")
 
@@ -48,7 +47,7 @@ func main() {
 		fmt.Println(fmt.Sprintf("  %04x", len(v)/2), "# Code section ", i, ",", len(v)/2, " bytes")
 	}
 
-	fmt.Println(fmt.Sprintf("03%04x", len(eofObject.Data)), "# Data section lenth (", len(eofObject.Data), ")")
+	fmt.Println(fmt.Sprintf("03%04x", len(eofObject.Data)), "# Data section length (", len(eofObject.Data)/2, ")")
 	fmt.Println("    00", "# Terminator (end of header)")
 
 	for i, v := range eofObject.Types {
