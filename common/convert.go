@@ -52,7 +52,7 @@ func DescribeBytecode(bytecode string) ([]OpCall, error) {
 			opCall := OpCall{OpCode: op, Immediates: make([]Immediate, 0)}
 
 			if op.Name == "" {
-				return nil, errors.New("Opcode not found")
+				return nil, errors.New(fmt.Sprintf("Opcode not found: %d", op.Code))
 			}
 
 			if op.Immediates > 0 {
@@ -62,64 +62,94 @@ func DescribeBytecode(bytecode string) ([]OpCall, error) {
 				if err != nil {
 					return nil, err
 				}
+
 				immediate = fmt.Sprintf("%0*x", op.Immediates*2, immediateInt)
 				opCall.Immediates = append(opCall.Immediates, Immediate{Type: Value, Immediate: immediate})
+
+				// RJUMPV can have many immediates
+				if op.Name == "RJUMPV" {
+					i += 2
+					for j := 0; j < int(immediateInt); j++ {
+						immediate := bytecode[i+2 : i+6]
+						immediateInt, err := strconv.ParseInt(immediate, 16, 64)
+
+						if err != nil {
+							return nil, err
+						}
+
+						immediate = fmt.Sprintf("%0*x", 4, immediateInt)
+						opCall.Immediates = append(opCall.Immediates, Immediate{Type: Value, Immediate: immediate})
+						i += 4
+					}
+					i -= 2
+				}
 			}
 			result = append(result, opCall)
 
 			i += op.Immediates * 2
 		} else {
-			return nil, errors.New("Opcode not found")
+			return nil, errors.New(fmt.Sprintf("Opcode not found: %s", code_str))
 		}
 	}
 
 	return result, nil
 }
 
+// TODO: receive []OpCall
 func Evm2Mnem(bytecode string) string {
-	result := ""
-	opcodes := GetOpcodesByNumber()
-	for i := 0; i < len(bytecode); i += 2 {
-		code_str := bytecode[i:(i + 2)]
-		code, err := strconv.ParseInt(code_str, 16, 64)
+	ops, err := DescribeBytecode(bytecode)
 
-		if err != nil {
-			// TODO
-			fmt.Println("Error: ", err)
-			return ""
-		}
-		if op, ok := opcodes[int(code)]; ok {
-			result = result + op.Name
-
-			if op.Immediates == 1 {
-				immediate := bytecode[i+2 : i+2+(op.Immediates*2)]
-				immediateInt, err := strconv.ParseInt(immediate, 16, 64)
-				immediate = strconv.Itoa(int(immediateInt))
-
-				if err != nil {
-					fmt.Println(err)
-				}
-				result = result + "(" + string(immediate) + ")"
-			} else if op.Immediates > 1 {
-				immediate := bytecode[i+2 : i+2+(op.Immediates*2)]
-				imm, err := strconv.ParseInt(immediate, 16, 64)
-
-				if err != nil {
-					result = result + "(0x" + immediate + ")"
-				} else {
-					if imm > 32767 {
-						imm = ((65535 - imm) + 1) * -1
-					}
-					result = result + "(" + strconv.Itoa(int(imm)) + ")"
-				}
-			}
-			i += (op.Immediates * 2)
-		} else {
-			fmt.Println("Error: opcode " + "0x" + code_str + " not found")
-			return ""
-		}
-		result = result + " "
+	if err != nil {
+		panic(err)
 	}
+
+	result := ""
+	for _, op := range ops {
+		result += op.Name
+
+		if op.OpCode.Immediates == 1 {
+			immInt, err := strconv.ParseInt(op.Immediates[0].Immediate, 16, 64)
+
+			if err != nil {
+				panic(err)
+			}
+
+			if op.Name == "RJUMPV" {
+				for i := 0; i < int(immInt); i++ {
+					immInt2, err := strconv.ParseInt(op.Immediates[i+1].Immediate, 16, 64)
+
+					if err != nil {
+						panic(err)
+					}
+
+					if i == 0 {
+						result = result + fmt.Sprintf("(%d, ", immInt2)
+					} else if i == int(immInt)-1 {
+						result = result + fmt.Sprintf("%d)", immInt2)
+					} else {
+						result = result + fmt.Sprintf("%d, ", immInt2)
+					}
+				}
+			} else {
+				result = result + fmt.Sprintf("(%d)", immInt)
+			}
+		} else if op.OpCode.Immediates > 1 {
+			immediate := op.Immediates[0].Immediate
+			imm, err := strconv.ParseInt(immediate, 16, 64)
+
+			if err != nil {
+				result = result + "0x" + immediate + ")"
+			} else {
+				if imm > 32767 {
+					imm = ((65535 - imm) + 1) * -1
+				}
+				result = result + "(" + strconv.Itoa(int(imm)) + ")"
+			}
+		}
+
+		result += " "
+	}
+
 	return result
 }
 

@@ -11,10 +11,9 @@ func describeCode(code string) {
 	ops, err := common.DescribeBytecode(code)
 
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("%v: code %s", err, code))
 	}
 
-	pc := 0
 	for _, opc := range ops {
 		bc, err := opc.ToBytecode()
 
@@ -23,10 +22,7 @@ func describeCode(code string) {
 		}
 
 		asm := common.Evm2Mnem(bc)
-
 		fmt.Println(fmt.Sprintf("% 6v # %v", bc, asm))
-
-		pc += 1 + opc.OpCode.Immediates
 	}
 }
 
