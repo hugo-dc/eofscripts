@@ -52,8 +52,8 @@ func main() {
 
 	for i, v := range eofObject.Types {
 		fmt.Println("       # Code", i, "types")
-		fmt.Println(fmt.Sprintf("    %02x", v[0]), "#", i, "inputs")
-		fmt.Println(fmt.Sprintf("    %02x", v[1]), "#", i, "outputs")
+		fmt.Println(fmt.Sprintf("    %02x", v[0]), "#", v[0], "inputs")
+		fmt.Println(fmt.Sprintf("    %02x", v[1]), "#", v[1], "outputs")
 		fmt.Println(fmt.Sprintf("  %04x", v[2]), "#", "max stack:", v[2])
 	}
 
