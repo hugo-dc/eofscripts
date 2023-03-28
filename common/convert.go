@@ -57,13 +57,16 @@ func DescribeBytecode(bytecode string) ([]OpCall, error) {
 
 			if op.Immediates > 0 {
 				immediate := bytecode[i+2 : i+2+(op.Immediates*2)]
-				immediateInt, err := strconv.ParseInt(immediate, 16, 64)
+				immediateInt := int64(0)
+				if op.Immediates <= 8 {
+					immediateInt_tmp, err := strconv.ParseInt(immediate, 16, 64)
 
-				if err != nil {
-					return nil, err
+					if err != nil {
+						return nil, err
+					}
+					immediate = fmt.Sprintf("%0*x", op.Immediates*2, immediateInt_tmp)
+					immediateInt = immediateInt_tmp
 				}
-
-				immediate = fmt.Sprintf("%0*x", op.Immediates*2, immediateInt)
 				opCall.Immediates = append(opCall.Immediates, Immediate{Type: Value, Immediate: immediate})
 
 				// RJUMPV can have many immediates
@@ -138,7 +141,7 @@ func Evm2Mnem(bytecode string) string {
 			imm, err := strconv.ParseInt(immediate, 16, 64)
 
 			if err != nil {
-				result = result + "0x" + immediate + ")"
+				result = result + "(0x" + immediate + ")"
 			} else {
 				if imm > 32767 {
 					imm = ((65535 - imm) + 1) * -1
@@ -272,7 +275,6 @@ func Mnem2Evm(mn string) string {
 		opCall, err := opcode2evm(opcode, immediate)
 
 		if err != nil {
-			fmt.Println("Error: ", err, opcode, immediate)
 			return ""
 		}
 		evm = append(evm, opCall)
