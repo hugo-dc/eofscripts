@@ -28,6 +28,9 @@ func describeCode(code string) {
 
 func main() {
 	eof_code := os.Args[1]
+	if eof_code[:2] == "0x" {
+		eof_code = eof_code[2:]
+	}
 	eofObject, err := common.ParseEOF(eof_code)
 
 	if err != nil {
