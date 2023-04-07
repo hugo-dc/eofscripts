@@ -44,11 +44,11 @@ func IntToHex(number int64) string {
 func SendTransaction(to ethCommon.Address, amount big.Int, data []byte) error {
 	ctx := context.Background()
 	chainId := int64(1231209)
-	gasLimit := uint64(1000000)
+	gasLimit := uint64(2000000)
 	gasPrice := big.NewInt(10 * 18000)
 
-	addr := ethCommon.HexToAddress("0x0a0e72E7Ec1e636Cd90C723E4d4b249dc7A08d37")
-	privateKey, err := crypto.HexToECDSA("a78ba7ce1fac579d25e98b3b9b80382e0684dff695bd61150abdc6726677b510")
+	addr := ethCommon.HexToAddress("0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b")
+	privateKey, err := crypto.HexToECDSA("45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8")
 
 	cl, err := ethclient.Dial("http://192.168.10.243:8545")
 	nonce, err := cl.NonceAt(ctx, addr, nil)

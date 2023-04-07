@@ -118,6 +118,7 @@ func (eof *EOFObject) Code(old bool, withTypes bool) string {
 		fmt.Println("typesSection:", typeContents)
 		fmt.Println("codeSection:", codeContents)
 		fmt.Println("dataSection:", eof.Data)
+		fmt.Println("--------")
 		eof_code = eof_code + versionHex + typesHeader + codeHeaders + dataHeader + terminator + typeContents + codeContents + eof.Data
 	}
 	return eof_code
@@ -267,10 +268,17 @@ func calculateMaxStack(funcId int, code string, types [][]int64) int64 {
 				pos += 2
 				fmt.Println(pos*2+count*2, len(code))
 				if int(pos)*2+int(count)*2 > len(code) {
-					fmt.Println("Error: truncated RJUMPV.")
+					fmt.Println("Error: truncated RJUMPV")
 					break
 				}
 				for i := 0; i < int(count); i++ {
+					fmt.Println("codelen:", len(code))
+					fmt.Println("target: ", int(pos)*2+4*i+4)
+					if len(code) <= int(pos)*2+4*i+4 {
+						fmt.Println("Error: truncated RJUMPV")
+						break
+					}
+
 					offset, _ := strconv.ParseInt(code[int(pos)*2+4*i:int(pos)*2+4*i+4], 16, 64)
 
 					if offset > 32767 {
@@ -281,9 +289,7 @@ func calculateMaxStack(funcId int, code string, types [][]int64) int64 {
 					fmt.Println("\twE:", pos+2*count+offset)
 					worklist = append(worklist, []int64{pos + 2*count + offset, stackHeight})
 				}
-				fmt.Println("\tcode:", code[pos*2:])
 				pos += 2 * count
-				fmt.Println("\tcode:", code[pos*2:])
 			default:
 				if opCode.IsTerminating {
 					break outer

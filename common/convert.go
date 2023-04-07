@@ -74,13 +74,6 @@ func DescribeBytecode(bytecode string) ([]OpCall, error) {
 					i += 2
 					for j := 0; j < int(immediateInt); j++ {
 						immediate := bytecode[i+2 : i+6]
-						immediateInt, err := strconv.ParseInt(immediate, 16, 64)
-
-						if err != nil {
-							return nil, err
-						}
-
-						immediate = fmt.Sprintf("%0*x", 4, immediateInt)
 						opCall.Immediates = append(opCall.Immediates, Immediate{Type: Value, Immediate: immediate})
 						i += 4
 					}
@@ -125,12 +118,16 @@ func Evm2Mnem(bytecode string) string {
 						panic(err)
 					}
 
+					if immInt2 > 32767 {
+						immInt2 = ((65535 - immInt2) + 1) * -1
+					}
+
 					if i == 0 {
-						result = result + fmt.Sprintf("(%d, ", immInt2)
+						result = result + fmt.Sprintf("(%d,", immInt2)
 					} else if i == int(immInt)-1 {
 						result = result + fmt.Sprintf("%d)", immInt2)
 					} else {
-						result = result + fmt.Sprintf("%d, ", immInt2)
+						result = result + fmt.Sprintf("%d,", immInt2)
 					}
 				}
 			} else {
@@ -273,11 +270,13 @@ func Mnem2Evm(mn string) string {
 			opcode = token
 		}
 		opCall, err := opcode2evm(opcode, immediate)
-
 		if err != nil {
 			return ""
 		}
 		evm = append(evm, opCall)
+		if opCall.OpCode.Name == "RJUMPV" {
+			pos += (len(opCall.Immediates) - 1) * 2
+		}
 		pos = pos + 1 + opCall.OpCode.Immediates
 	}
 
@@ -286,16 +285,28 @@ func Mnem2Evm(mn string) string {
 	for _, op := range evm {
 		result += op.OpCode.AsHex()
 
+		//fmt.Println(pos, op.OpCode)
 		pos = pos + 1 + op.OpCode.Immediates
+		if op.OpCode.Name == "RJUMPV" {
+			pos += (len(op.Immediates) - 1) * 2 // Add the immediates
+		}
+
 		for _, im := range op.Immediates {
 			if im.Type == Label {
 				if p, ok := labels[im.Immediate]; ok {
 					if op.OpCode.Name == "RJUMP" || op.OpCode.Name == "RJUMPI" || op.OpCode.Name == "RJUMPV" {
-						if p > pos {
+						//fmt.Println("pos:", pos)
+						//fmt.Println("p:", p)
+						//fmt.Println("p-pos:", p-pos)
+						if p >= pos {
 							result += fmt.Sprintf("%04x", p-pos)
 						} else {
 							imm_hex := strconv.FormatUint(uint64(p-pos), 16)
-							imm_hex = imm_hex[len(imm_hex)-op.OpCode.Immediates*2:]
+							if op.OpCode.Name == "RJUMPV" {
+								imm_hex = imm_hex[len(imm_hex)-4:]
+							} else {
+								imm_hex = imm_hex[len(imm_hex)-op.OpCode.Immediates*2:]
+							}
 							result += imm_hex
 						}
 					} else {
