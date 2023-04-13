@@ -9,10 +9,11 @@ import (
 )
 
 type EOFObject struct {
-	Version      int64
-	Types        [][]int64
-	CodeSections []string
-	Data         string
+	Version           int64
+	Types             [][]int64
+	CodeSections      []string
+	Data              string
+	ContainerSections []string
 }
 
 const (
@@ -143,6 +144,10 @@ func (eof *EOFObject) AddCodeWithType(code string, codeType []int64) {
 
 	// Add Code
 	eof.CodeSections = append(eof.CodeSections, code)
+}
+
+func (eof *EOFObject) AddContainer(container string) {
+	eof.ContainerSections = append(eof.ContainerSections, container)
 }
 
 func (eof *EOFObject) AddDefaultType() bool {
@@ -318,11 +323,12 @@ func ParseEOF(eof_code string) (EOFObject, error) {
 	versionHex := ""
 	eof_code = strings.ToLower(eof_code)
 
-	codeHeaders := []int64{}
 	typesLength := int64(0)
 	types := [][]int64{}
+	codeHeaders := []int64{}
 	dataLength := int64(0)
 	dataContent := ""
+	containerHeaders := []int64{}
 
 	result := NewEOFObject()
 
@@ -396,6 +402,29 @@ func ParseEOF(eof_code string) (EOFObject, error) {
 			i += 4
 		}
 
+		if b == "04" {
+			containerSectionsTotalHex := eof_code[i+2 : i+6]
+			containerSectionsTotal, err := strconv.ParseInt(containerSectionsTotalHex, 16, 64)
+
+			if err != nil {
+				return result, errors.New("Invalid container sections total")
+			}
+
+			i += 6
+			for j := 0; j < int(containerSectionsTotal); j++ {
+				containerLenHex := eof_code[i : i+4]
+				containerLen, err := strconv.ParseInt(containerLenHex, 16, 64)
+
+				if err != nil {
+					return result, errors.New("Invalid container section length")
+				}
+
+				containerHeaders = append(containerHeaders, containerLen)
+				i += 4
+			}
+			i -= 2
+		}
+
 		if b == "00" {
 			for j := 0; j < int(typesLength); j += 4 {
 				inputsHex := eof_code[i+2 : i+4]
@@ -435,6 +464,13 @@ func ParseEOF(eof_code string) (EOFObject, error) {
 			dataContent = eof_code[i : i+int(dataLength)*2]
 			result.Data = dataContent
 			i += int(dataLength) * 2
+
+			// Extract containers
+			for _, ch := range containerHeaders {
+				container := eof_code[i : i+int(ch)*2]
+				result.AddContainer(container)
+				i += int(ch) * 2
+			}
 		}
 		i += 2
 	}

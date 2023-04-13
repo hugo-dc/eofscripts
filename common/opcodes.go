@@ -183,6 +183,7 @@ var opcodes = []OpCode{
 	{Name: "RETURN", Code: 0xf3, Immediates: 0, StackInput: 2, StackOutput: 0, IsTerminating: true},
 	{Name: "DELEGATECALL", Code: 0xf4, Immediates: 0, StackInput: 6, StackOutput: 1, IsTerminating: false},
 	{Name: "CREATE2", Code: 0xf5, Immediates: 0, StackInput: 4, StackOutput: 1, IsTerminating: false},
+	{Name: "CREATE3", Code: 0xf6, Immediates: 1, StackInput: 4, StackOutput: 1, IsTerminating: false},
 	{Name: "STATICCALL", Code: 0xfa, Immediates: 0, StackInput: 6, StackOutput: 1, IsTerminating: false},
 	{Name: "REVERT", Code: 0xfd, Immediates: 0, StackInput: 2, StackOutput: 0, IsTerminating: true},
 	{Name: "INVALID", Code: 0xfe, Immediates: 0, StackInput: 0, StackOutput: 0, IsTerminating: true},
