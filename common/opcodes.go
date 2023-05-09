@@ -27,6 +27,13 @@ func (op OpCode) IsPush() bool {
 	return op.Code >= 0x60 && op.Code <= 0x7f
 }
 
+func (op OpCode) IsEOFDeprecated() bool {
+	if op.Name == "JUMP" || op.Name == "JUMPI" || op.Name == "PC" || op.Name == "CALLCODE" || op.Name == "SELFDESTRUCT" {
+		return true
+	}
+	return false
+}
+
 var opcodes = []OpCode{
 	{Name: "STOP", Code: 0x00, Immediates: 0, StackInput: 0, StackOutput: 0, IsTerminating: true},
 	{Name: "ADD", Code: 0x01, Immediates: 0, StackInput: 2, StackOutput: 1, IsTerminating: false},

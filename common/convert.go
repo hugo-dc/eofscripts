@@ -36,6 +36,18 @@ func (op OpCall) ToBytecode() (string, error) {
 	return bytecode, nil
 }
 
+type EOFObjectModifier struct {
+	Magic       bool
+	Version     bool
+	TypeHeader  bool
+	CodeHeader  bool
+	DataHeader  bool
+	Terminator  bool
+	TypeSection map[int]string
+	CodeSection map[int]bool
+	DataSection bool
+}
+
 func DescribeBytecode(bytecode string) ([]OpCall, error) {
 	result := make([]OpCall, 0)
 	opcodes := GetOpcodesByNumber()
@@ -58,7 +70,7 @@ func DescribeBytecode(bytecode string) ([]OpCall, error) {
 			if op.Immediates > 0 {
 				immediate := bytecode[i+2 : i+2+(op.Immediates*2)]
 				immediateInt := int64(0)
-				if op.Immediates <= 8 {
+				if op.Immediates < 8 {
 					immediateInt_tmp, err := strconv.ParseInt(immediate, 16, 64)
 
 					if err != nil {
@@ -73,6 +85,9 @@ func DescribeBytecode(bytecode string) ([]OpCall, error) {
 				if op.Name == "RJUMPV" {
 					i += 2
 					for j := 0; j < int(immediateInt); j++ {
+						if i+6 > len(bytecode) {
+							return nil, errors.New(fmt.Sprintf("Truncated RJUMPV at position %d", i))
+						}
 						immediate := bytecode[i+2 : i+6]
 						opCall.Immediates = append(opCall.Immediates, Immediate{Type: Value, Immediate: immediate})
 						i += 4
@@ -323,4 +338,70 @@ func Mnem2Evm(mn string) string {
 	}
 
 	return result
+}
+
+func NewEOFObjectModifier() EOFObjectModifier {
+	return EOFObjectModifier{
+		Magic:       true,
+		Version:     true,
+		TypeHeader:  true,
+		CodeHeader:  true,
+		DataHeader:  true,
+		Terminator:  true,
+		TypeSection: make(map[int]string),
+		CodeSection: make(map[int]bool),
+		DataSection: true,
+	}
+}
+
+func ModifyEOFObject(eofObject EOFObject, modifier EOFObjectModifier) string {
+	newcode := ""
+	if modifier.Magic {
+		newcode += "ef00"
+	}
+	if modifier.Version {
+		newcode += fmt.Sprintf("%02x", eofObject.Version)
+	}
+	if modifier.TypeHeader {
+		newcode += fmt.Sprintf("01%04x", len(eofObject.Types)*4)
+	}
+	if modifier.CodeHeader {
+		newcode += fmt.Sprintf("02%04x", len(eofObject.CodeSections))
+
+		for _, cs := range eofObject.CodeSections {
+			newcode += fmt.Sprintf("%04x", len(cs)/2)
+		}
+	}
+	if modifier.DataHeader {
+		newcode += fmt.Sprintf("03%04x", len(eofObject.Data)/2)
+	}
+	if modifier.Terminator {
+		newcode += "00"
+	}
+
+	for i, t := range eofObject.Types {
+		if s, ok := modifier.TypeSection[i]; ok {
+			// If it is blank, means has to be removed
+			if s != "" {
+				newcode += s
+			}
+		} else {
+			newcode += fmt.Sprintf("%02x%02x%02x", t[0], t[1], t[2])
+		}
+	}
+
+	for i, cs := range eofObject.CodeSections {
+		if remain, ok := modifier.CodeSection[i]; ok {
+			if remain {
+				newcode += cs
+			}
+		} else {
+			newcode += cs
+		}
+	}
+
+	if modifier.DataSection {
+		newcode += eofObject.Data
+	}
+	return newcode
 }
