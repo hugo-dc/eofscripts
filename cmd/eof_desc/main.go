@@ -46,11 +46,11 @@ func main() {
 		fmt.Println(fmt.Sprintf("  %04x", len(v)/2), "# Code section ", i, ",", len(v)/2, " bytes")
 	}
 
-	fmt.Println(fmt.Sprintf("03%04x", len(eofObject.Data)/2), "# Data section length (", len(eofObject.Data)/2, ")")
-	fmt.Println(fmt.Sprintf("04%04x", len(eofObject.ContainerSections)), "# Total container sections (", len(eofObject.ContainerSections), ")")
+	fmt.Println(fmt.Sprintf("03%04x", len(eofObject.ContainerSections)), "# Total container sections (", len(eofObject.ContainerSections), ")")
 	for i, v := range eofObject.ContainerSections {
 		fmt.Println(fmt.Sprintf("  %04x", len(v)/2), "# Container section ", i, ",", len(v)/2, " bytes")
 	}
+	fmt.Println(fmt.Sprintf("04%04x", len(eofObject.Data)/2), "# Data section length (", len(eofObject.Data)/2, ")")
 	fmt.Println("    00", "# Terminator (end of header)")
 
 	for i, v := range eofObject.Types {
@@ -72,9 +72,9 @@ func main() {
 	}
 
 	fmt.Println("       # Data section", comment)
+	fmt.Println(eofObject.Data)
 	for i, v := range eofObject.ContainerSections {
 		fmt.Println("       # Container section", i)
 		fmt.Println(v)
 	}
-	fmt.Println(eofObject.Data)
 }

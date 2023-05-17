@@ -391,18 +391,6 @@ func ParseEOF(eof_code string) (EOFObject, error) {
 		}
 
 		if b == "03" {
-			err := errors.New("")
-			dataLengthHex := eof_code[i+2 : i+6]
-			dataLength, err = strconv.ParseInt(dataLengthHex, 16, 64)
-
-			if err != nil {
-				return result, errors.New("Invalid data section length")
-			}
-
-			i += 4
-		}
-
-		if b == "04" {
 			containerSectionsTotalHex := eof_code[i+2 : i+6]
 			containerSectionsTotal, err := strconv.ParseInt(containerSectionsTotalHex, 16, 64)
 
@@ -423,6 +411,18 @@ func ParseEOF(eof_code string) (EOFObject, error) {
 				i += 4
 			}
 			i -= 2
+		}
+
+		if b == "04" {
+			err := errors.New("")
+			dataLengthHex := eof_code[i+2 : i+6]
+			dataLength, err = strconv.ParseInt(dataLengthHex, 16, 64)
+
+			if err != nil {
+				return result, errors.New("Invalid data section length")
+			}
+
+			i += 4
 		}
 
 		if b == "00" {
