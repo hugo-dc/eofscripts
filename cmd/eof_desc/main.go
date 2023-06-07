@@ -22,7 +22,7 @@ func describeCode(code string) {
 		}
 
 		asm := common.Evm2Mnem(bc)
-		fmt.Println(fmt.Sprintf("% 6v # %v", bc, asm))
+		fmt.Println(fmt.Sprintf("% 6v # [%v] %v", bc, opc.Position, asm))
 	}
 }
 

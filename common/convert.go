@@ -18,6 +18,7 @@ type Immediate struct {
 }
 
 type OpCall struct {
+	Position int
 	OpCode
 	Immediates []Immediate
 }
@@ -61,7 +62,7 @@ func DescribeBytecode(bytecode string) ([]OpCall, error) {
 		}
 
 		if op, ok := opcodes[int(code)]; ok {
-			opCall := OpCall{OpCode: op, Immediates: make([]Immediate, 0)}
+			opCall := OpCall{Position: i / 2, OpCode: op, Immediates: make([]Immediate, 0)}
 
 			if op.Name == "" {
 				return nil, errors.New(fmt.Sprintf("Opcode not found: %d", op.Code))
