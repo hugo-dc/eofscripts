@@ -34,15 +34,16 @@ func showUsage() {
 }
 
 type ContractSections struct {
-	Magic       bool
-	Version     bool
-	TypeHeader  bool
-	CodeHeader  bool
-	DataHeader  bool
-	Terminator  bool
-	TypeSection map[int]bool
-	CodeSection map[int]bool
-	DataSection bool
+	Magic           bool
+	Version         bool
+	TypeHeader      bool
+	CodeHeader      bool
+	ContainerHeader bool
+	DataHeader      bool
+	Terminator      bool
+	TypeSection     map[int]bool
+	CodeSection     map[int]bool
+	DataSection     bool
 }
 
 func main() {
@@ -52,15 +53,16 @@ func main() {
 	}
 
 	cs := ContractSections{
-		Magic:       true,
-		Version:     true,
-		TypeHeader:  true,
-		CodeHeader:  true,
-		DataHeader:  true,
-		Terminator:  true,
-		TypeSection: make(map[int]bool),
-		CodeSection: make(map[int]bool),
-		DataSection: true,
+		Magic:           true,
+		Version:         true,
+		TypeHeader:      true,
+		CodeHeader:      true,
+		ContainerHeader: true,
+		DataHeader:      true,
+		Terminator:      true,
+		TypeSection:     make(map[int]bool),
+		CodeSection:     make(map[int]bool),
+		DataSection:     true,
 	}
 	modTypeSections := make(map[int]string)
 	eof_code := os.Args[1]
@@ -111,6 +113,10 @@ func main() {
 				}
 			}
 			cs.TypeSection[section] = true
+			if len(os.Args[i+2]) != 8 {
+				fmt.Println("Error: type must be in format 00000000")
+				return
+			}
 			modTypeSections[section] = os.Args[i+2]
 			break
 		case a == "-cs" || a == "-code-section":
@@ -137,18 +143,26 @@ func main() {
 		fmt.Printf("%02d", eofObject.Version)
 	}
 	if cs.TypeHeader {
-		fmt.Printf("01%04x", len(eofObject.Types)*4)
+		fmt.Printf("%02x%04x", common.CTypeId, len(eofObject.Types)*4)
 	}
 	if cs.CodeHeader {
-		ch := fmt.Sprintf("02%04x", len(eofObject.CodeSections))
+		ch := fmt.Sprintf("%02x%04x", common.CCodeId, len(eofObject.CodeSections))
 
 		for _, cs := range eofObject.CodeSections {
 			ch += fmt.Sprintf("%04x", len(cs)/2)
 		}
 		fmt.Print(ch)
 	}
+	if cs.ContainerHeader && len(eofObject.ContainerSections) > 0 {
+		fmt.Printf("%02x%04x", common.CContainerId, len(eofObject.ContainerSections))
+
+		for _, cs := range eofObject.ContainerSections {
+			fmt.Printf("%04x", len(cs)/2)
+		}
+	}
+
 	if cs.DataHeader {
-		fmt.Printf("03%04x", len(eofObject.Data)/2)
+		fmt.Printf("%02x%04x", common.CDataId, len(eofObject.Data)/2)
 	}
 	if cs.Terminator {
 		fmt.Print("00")
@@ -158,7 +172,8 @@ func main() {
 	if _, ok := cs.TypeSection[-1]; ok {
 		hideAll = true
 	}
-	if hideAll != true {
+
+	if hideAll == false {
 		for i, t := range eofObject.Types {
 			showSection := true
 			if v, ok := cs.TypeSection[i]; ok {

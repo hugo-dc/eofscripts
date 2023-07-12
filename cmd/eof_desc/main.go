@@ -39,19 +39,21 @@ func main() {
 
 	// Print the EOF object
 	fmt.Println("EF00"+fmt.Sprintf("%02x", eofObject.Version), "# Magic and Version (", eofObject.Version, ")")
-	fmt.Println(fmt.Sprintf("01%04x", len(eofObject.Types)*4), "# Types length (", len(eofObject.Types)*4, ")")
-	fmt.Println(fmt.Sprintf("02%04x", len(eofObject.CodeSections)), "# Total code sections (", len(eofObject.CodeSections), ")")
+	fmt.Println(fmt.Sprintf("%02x%04x", common.CTypeId, len(eofObject.Types)*4), "# Types length (", len(eofObject.Types)*4, ")")
+	fmt.Println(fmt.Sprintf("%02x%04x", common.CCodeId, len(eofObject.CodeSections)), "# Total code sections (", len(eofObject.CodeSections), ")")
 
 	for i, v := range eofObject.CodeSections {
 		fmt.Println(fmt.Sprintf("  %04x", len(v)/2), "# Code section ", i, ",", len(v)/2, " bytes")
 	}
 
-	fmt.Println(fmt.Sprintf("03%04x", len(eofObject.ContainerSections)), "# Total container sections (", len(eofObject.ContainerSections), ")")
-	for i, v := range eofObject.ContainerSections {
-		fmt.Println(fmt.Sprintf("  %04x", len(v)/2), "# Container section ", i, ",", len(v)/2, " bytes")
+	if len(eofObject.ContainerSections) > 0 {
+		fmt.Println(fmt.Sprintf("%02x%04x", common.CContainerId, len(eofObject.ContainerSections)), "# Total container sections (", len(eofObject.ContainerSections), ")")
+		for i, v := range eofObject.ContainerSections {
+			fmt.Println(fmt.Sprintf("  %04x", len(v)/2), "# Container section ", i, ",", len(v)/2, " bytes")
+		}
 	}
-	fmt.Println(fmt.Sprintf("04%04x", len(eofObject.Data)/2), "# Data section length (", len(eofObject.Data)/2, ")")
-	fmt.Println("    00", "# Terminator (end of header)")
+	fmt.Println(fmt.Sprintf("%02x%04x", common.CDataId, len(eofObject.Data)/2), "# Data section length (", len(eofObject.Data)/2, ")")
+	fmt.Println(fmt.Sprintf("    %02x # Terminator (end of header)", common.CTerminatorId))
 
 	for i, v := range eofObject.Types {
 		fmt.Println("       # Code", i, "types")
@@ -65,8 +67,15 @@ func main() {
 		describeCode(v)
 	}
 
-	comment := ""
+	if len(eofObject.ContainerSections) > 0 {
+		fmt.Println("       # Container sections")
+		for i, v := range eofObject.ContainerSections {
+			fmt.Println("       # Container section", i)
+			describeCode(v)
+		}
+	}
 
+	comment := ""
 	if len(eofObject.Data) == 0 {
 		comment = "(empty)"
 	}
