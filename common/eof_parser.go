@@ -17,12 +17,14 @@ type EOFObject struct {
 }
 
 const (
-	cOldCodeId = "01"
-	cOldDataId = "02"
-	cOldTypeId = "03"
-	cTypeId    = "01"
-	cCodeId    = "02"
-	cDataId    = "03"
+	cOldCodeId    = 1
+	cOldDataId    = 2
+	cOldTypeId    = 3
+	CTypeId       = 1
+	CCodeId       = 2
+	CContainerId  = 3
+	CDataId       = 4
+	CTerminatorId = 0
 )
 
 func NewEOFObject() EOFObject {
@@ -41,14 +43,15 @@ func (eof *EOFObject) CodeNew(withTypes bool) string {
 func (eof *EOFObject) Code(old bool, withTypes bool) string {
 	eof_code := "ef00"
 
-	typeId := cTypeId
-	codeId := cCodeId
-	dataId := cDataId
+	typeId := fmt.Sprintf("%02x", CTypeId)
+	codeId := fmt.Sprintf("%02x", CCodeId)
+	containerId := fmt.Sprintf("%02x", CContainerId)
+	dataId := fmt.Sprintf("%02x", CDataId)
 
 	if old {
-		typeId = cOldTypeId
-		codeId = cOldCodeId
-		dataId = cOldDataId
+		typeId = fmt.Sprintf("%02x", cOldTypeId)
+		codeId = fmt.Sprintf("%02x", cOldCodeId)
+		dataId = fmt.Sprintf("%02x", cOldDataId)
 	}
 
 	versionHex := fmt.Sprintf("%02x", eof.Version)
@@ -75,6 +78,21 @@ func (eof *EOFObject) Code(old bool, withTypes bool) string {
 	}
 	numCodeSectionsHex := fmt.Sprintf("%04x", numCodeSections)
 	codeHeaders = codeId + numCodeSectionsHex + codeLengths
+
+	containerHeader := ""
+	containersLength := ""
+	numContainers := 0
+	containerContents := ""
+	for _, c := range eof.ContainerSections {
+		containersLengthHex := fmt.Sprintf("%04x", len(c)/2)
+		containersLength = containersLength + containersLengthHex
+		numContainers += 1
+		containerContents = containerContents + c
+	}
+	if numContainers > 0 {
+		numContainersHex := fmt.Sprintf("%04x", numContainers)
+		containerHeader = containerId + numContainersHex + containersLength
+	}
 
 	dataHeader := ""
 	dataLengthHex := fmt.Sprintf("%04x", len(eof.Data)/2)
@@ -113,14 +131,16 @@ func (eof *EOFObject) Code(old bool, withTypes bool) string {
 		fmt.Println("version:", versionHex)
 		fmt.Println("types:", typesHeader)
 		fmt.Println("codeHeaders:", codeHeaders)
+		fmt.Println("containersHeaders:", containerHeader)
 		fmt.Println("dataHeader:", dataHeader)
 		fmt.Println("terminator:", terminator)
 		fmt.Println("BODY\n--------")
 		fmt.Println("typesSection:", typeContents)
 		fmt.Println("codeSection:", codeContents)
+		fmt.Println("containersSection:", containerContents)
 		fmt.Println("dataSection:", eof.Data)
 		fmt.Println("--------")
-		eof_code = eof_code + versionHex + typesHeader + codeHeaders + dataHeader + terminator + typeContents + codeContents + eof.Data
+		eof_code = eof_code + versionHex + typesHeader + codeHeaders + containerHeader + dataHeader + terminator + typeContents + codeContents + containerContents + eof.Data
 	}
 	return eof_code
 }
