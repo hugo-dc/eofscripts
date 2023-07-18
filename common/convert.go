@@ -137,7 +137,9 @@ func Evm2Mnem(bytecode string) string {
 						immInt2 = ((65535 - immInt2) + 1) * -1
 					}
 
-					if i == 0 {
+					if immInt == 1 {
+						result = result + fmt.Sprintf("(%d)", immInt2)
+					} else if i == 0 {
 						result = result + fmt.Sprintf("(%d,", immInt2)
 					} else if i == int(immInt)-1 {
 						result = result + fmt.Sprintf("%d)", immInt2)
