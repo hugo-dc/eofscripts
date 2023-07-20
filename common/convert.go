@@ -85,7 +85,7 @@ func DescribeBytecode(bytecode string) ([]OpCall, error) {
 				// RJUMPV can have many immediates
 				if op.Name == "RJUMPV" {
 					i += 2
-					for j := 0; j < int(immediateInt); j++ {
+					for j := 0; j <= int(immediateInt); j++ {
 						if i+6 > len(bytecode) {
 							return nil, errors.New(fmt.Sprintf("Truncated RJUMPV at position %d", i))
 						}
@@ -127,7 +127,7 @@ func Evm2Mnem(bytecode string) string {
 			}
 
 			if op.Name == "RJUMPV" {
-				for i := 0; i < int(immInt); i++ {
+				for i := 0; i <= int(immInt); i++ {
 					immInt2, err := strconv.ParseInt(op.Immediates[i+1].Immediate, 16, 64)
 
 					if err != nil {
@@ -138,11 +138,11 @@ func Evm2Mnem(bytecode string) string {
 						immInt2 = ((65535 - immInt2) + 1) * -1
 					}
 
-					if immInt == 1 {
+					if immInt == 0 {
 						result = result + fmt.Sprintf("(%d)", immInt2)
 					} else if i == 0 {
 						result = result + fmt.Sprintf("(%d,", immInt2)
-					} else if i == int(immInt)-1 {
+					} else if i == int(immInt) {
 						result = result + fmt.Sprintf("%d)", immInt2)
 					} else {
 						result = result + fmt.Sprintf("%d,", immInt2)
@@ -194,8 +194,8 @@ func opcode2evm(opcode string, immediate string) (OpCall, error) {
 	if immediate != "" {
 		if op.Name == "RJUMPV" {
 			values := strings.Split(immediate, ",")
-			count := len(values)
-			opCall.Immediates = append(opCall.Immediates, Immediate{Type: Value, Immediate: fmt.Sprintf("%02x", count)})
+			max_size := len(values) - 1
+			opCall.Immediates = append(opCall.Immediates, Immediate{Type: Value, Immediate: fmt.Sprintf("%02x", max_size)})
 			for _, ro := range values {
 				relativeOffset, err := strconv.ParseInt(ro, 10, 64)
 
