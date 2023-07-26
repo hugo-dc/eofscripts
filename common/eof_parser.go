@@ -280,7 +280,6 @@ func calculateMaxStack(funcId int, code string, types [][]int64) int64 {
 				}
 
 				worklist = append(worklist, []int64{pos + 3 + offset, stackHeight})
-				fmt.Println(code[pos*2+2 : pos*2+6])
 				pos += int64(opCode.Immediates) + 1
 			case opCode.Name == "RJUMPV":
 				if int(pos)*2+4 > len(code) {
@@ -288,10 +287,10 @@ func calculateMaxStack(funcId int, code string, types [][]int64) int64 {
 					break
 				}
 				count, _ := strconv.ParseInt(code[pos*2+2:pos*2+4], 16, 64)
+				count = count + 1
 				fmt.Println("\tcount:", count)
 
 				pos += 2
-				fmt.Println(pos*2+count*2, len(code))
 				if int(pos)*2+int(count)*2 > len(code) {
 					fmt.Println("Error: truncated RJUMPV")
 					break
@@ -322,7 +321,6 @@ func calculateMaxStack(funcId int, code string, types [][]int64) int64 {
 					pos += int64(opCode.Immediates) + 1
 				}
 			}
-
 			maxStackHeight = int64(math.Max(float64(maxStackHeight), float64(stackHeight)))
 		}
 
