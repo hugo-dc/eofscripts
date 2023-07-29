@@ -108,7 +108,12 @@ func (eof *EOFObject) Code(old bool, withTypes bool) string {
 		if old {
 			typeContents = typeContents + inputsHex + outputsHex
 		} else {
-			maxStackHeight := calculateMaxStack(i, eof.CodeSections[i], eof.Types)
+			maxStackHeight, isNRF := calculateMaxStackAndNRF(i, eof.CodeSections[i], eof.Types)
+
+			if isNRF { // Mark function as non-returning function
+				outputsHex = fmt.Sprintf("%02x", 0x80)
+			}
+
 			maxStackHeightHex := fmt.Sprintf("%04x", maxStackHeight)
 			typeContents = typeContents + inputsHex + outputsHex + maxStackHeightHex
 		}
@@ -179,10 +184,11 @@ func (eof *EOFObject) AddDefaultType() bool {
 	}
 }
 
-func calculateMaxStack(funcId int, code string, types [][]int64) int64 {
+func calculateMaxStackAndNRF(funcId int, code string, types [][]int64) (int64, bool) {
 	stackHeights := map[int64]int64{}
 	startStackHeight := types[funcId][0]
 	maxStackHeight := startStackHeight
+	isNRF := true
 	worklist := [][]int64{{0, startStackHeight}}
 
 	opCodes := GetOpcodesByNumber()
@@ -256,6 +262,7 @@ func calculateMaxStack(funcId int, code string, types [][]int64) int64 {
 				stackHeight += stackHeightChange
 				pos += 3
 			case opCode.Name == "RETF":
+				isNRF = false
 				if int64(types[funcId][1]) != stackHeight {
 					fmt.Printf("Wrong number of outputs (want:%d, got: %d)", types[funcId][1], stackHeight)
 				}
@@ -333,7 +340,7 @@ func calculateMaxStack(funcId int, code string, types [][]int64) int64 {
 		}
 	}
 	fmt.Println(">> heights:", len(stackHeights))
-	return maxStackHeight
+	return maxStackHeight, isNRF
 }
 
 func ParseEOF(eof_code string) (EOFObject, error) {
