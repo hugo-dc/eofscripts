@@ -131,20 +131,6 @@ func (eof *EOFObject) Code(old bool, withTypes bool) string {
 			eof_code = eof_code + versionHex + oldCodeHeaders + terminator + codeContents
 		}
 	} else {
-		fmt.Println("HEADER\n--------")
-		fmt.Println("magic:", eof_code)
-		fmt.Println("version:", versionHex)
-		fmt.Println("types:", typesHeader)
-		fmt.Println("codeHeaders:", codeHeaders)
-		fmt.Println("containersHeaders:", containerHeader)
-		fmt.Println("dataHeader:", dataHeader)
-		fmt.Println("terminator:", terminator)
-		fmt.Println("BODY\n--------")
-		fmt.Println("typesSection:", typeContents)
-		fmt.Println("codeSection:", codeContents)
-		fmt.Println("containersSection:", containerContents)
-		fmt.Println("dataSection:", eof.Data)
-		fmt.Println("--------")
 		eof_code = eof_code + versionHex + typesHeader + codeHeaders + containerHeader + dataHeader + terminator + typeContents + codeContents + containerContents + eof.Data
 	}
 	return eof_code
@@ -208,7 +194,6 @@ func calculateMaxStackAndNRF(funcId int, code string, types [][]int64) (int64, b
 			}
 			op, _ := strconv.ParseInt(code[pos*2:pos*2+2], 16, 64)
 			opCode := opCodes[int(op)]
-			fmt.Println(pos, opCode)
 			if exp, ok := stackHeights[pos]; ok {
 				if stackHeight != exp {
 					fmt.Println("stackHeight:", stackHeight, "exp:", exp, "at pos", pos)
@@ -339,7 +324,6 @@ func calculateMaxStackAndNRF(funcId int, code string, types [][]int64) (int64, b
 			break
 		}
 	}
-	fmt.Println(">> heights:", len(stackHeights))
 	return maxStackHeight, isNRF
 }
 
