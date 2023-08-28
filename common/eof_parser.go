@@ -212,7 +212,6 @@ func calculateMaxStackAndNRF(funcId int, code string, types [][]int64) (int64, b
 			if stackHeightRequired > stackHeight {
 				fmt.Println("stackHeightRequired:", stackHeightRequired, "stackHeight:", stackHeight)
 				fmt.Println("stack underflow")
-				break
 			}
 
 			if (1024 + stackHeightChange) < stackHeight {
@@ -237,7 +236,6 @@ func calculateMaxStackAndNRF(funcId int, code string, types [][]int64) (int64, b
 
 				if stackHeightRequired > stackHeight {
 					fmt.Println("stack underflow")
-					break
 				}
 
 				if (1024 + stackHeightChange) < stackHeight {
@@ -249,7 +247,7 @@ func calculateMaxStackAndNRF(funcId int, code string, types [][]int64) (int64, b
 			case opCode.Name == "RETF":
 				isNRF = false
 				if int64(types[funcId][1]) != stackHeight {
-					fmt.Printf("Wrong number of outputs (want:%d, got: %d)", types[funcId][1], stackHeight)
+					fmt.Printf("Wrong number of outputs (want:%d, got: %d)\n", types[funcId][1], stackHeight)
 				}
 				break outer
 			case opCode.Name == "RJUMP":
