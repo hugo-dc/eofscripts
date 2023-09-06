@@ -75,7 +75,8 @@ func main() {
 		fmt.Println("       # Container sections")
 		for i, v := range eofObject.ContainerSections {
 			fmt.Println("       # Container section", i)
-			describeCode(v)
+			fmt.Println(v)
+			//describeCode(v)
 		}
 	}
 
@@ -86,8 +87,10 @@ func main() {
 
 	fmt.Println("       # Data section", comment)
 	fmt.Println(eofObject.Data)
-	for i, v := range eofObject.ContainerSections {
-		fmt.Println("       # Container section", i)
-		fmt.Println(v)
-	}
+	/*
+		for i, v := range eofObject.ContainerSections {
+			fmt.Println("       # Container section", i)
+			fmt.Println(v)
+		}
+	*/
 }
