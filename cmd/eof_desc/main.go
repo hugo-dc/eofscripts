@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/hugo-dc/ethscripts/common"
 )
@@ -31,6 +32,7 @@ func main() {
 	if eof_code[:2] == "0x" {
 		eof_code = eof_code[2:]
 	}
+	eof_code = strings.Replace(eof_code, " ", "", -1)
 	eofObject, err := common.ParseEOF(eof_code)
 
 	if err != nil {
