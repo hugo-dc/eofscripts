@@ -10,6 +10,8 @@ import (
 
 func showUsage() {
 	fmt.Println("opinfo <opcode> [option]")
+	fmt.Println("  opcode:")
+	fmt.Println("    <opcode>\tOpcode name, decimal, or hexadecimal value (0x prefixed)")
 	fmt.Println("  options:")
 	fmt.Println("    --name\tShow opcode Name")
 	fmt.Println("    --hex\tShow opcode hexadecimal value")
@@ -31,33 +33,43 @@ func main() {
 
 	var opcode common.OpCode
 
-	if len(opId) > 2 {
-		if opId[:2] == "0x" {
-			opcodes := common.GetOpcodesByNumber()
+	if opId[:2] == "0x" {
 
-			opId64, err := strconv.ParseInt(opId[2:], 16, 64)
+		opId64, err := strconv.ParseInt(opId[2:], 16, 64)
 
-			if err != nil {
-				fmt.Println("Error:", err)
-				return
-			}
+		if err != nil {
+			fmt.Println("Error:", err)
+			return
+		}
 
-			if op, ok := opcodes[int(opId64)]; ok {
+		opcodes := common.GetOpcodesByNumber()
+
+		if op, ok := opcodes[int(opId64)]; ok {
+			opcode = op
+		} else {
+			fmt.Println("Opcode", opId, "not found!")
+			return
+		}
+	} else {
+		opId64, err := strconv.ParseInt(opId, 10, 64)
+
+		if err != nil {
+			opcodes := common.GetOpcodesByName()
+
+			if op, ok := opcodes[opId]; ok {
 				opcode = op
 			} else {
 				fmt.Println("Opcode", opId, "not found!")
 				return
 			}
 		} else {
-			opcodes := common.GetOpcodesByName()
+			fmt.Println("⚠️ Warning: opcode value", opId, "is being interpreted as decimal\n")
+			opcodes := common.GetOpcodesByNumber()
 
-			if op, ok := opcodes[opId]; ok {
+			if op, ok := opcodes[int(opId64)]; ok {
 				opcode = op
 			}
 		}
-	} else {
-		showUsage()
-		return
 	}
 
 	option := os.Args[2]
@@ -89,5 +101,14 @@ func main() {
 		} else {
 			fmt.Println("false")
 		}
+	}
+	if option == "--all" {
+		fmt.Println("Name:", opcode.Name)
+		fmt.Println("Hex:", fmt.Sprintf("0x%02x", opcode.Code))
+		fmt.Println("Inputs:", opcode.StackInput)
+		fmt.Println("Outputs:", opcode.StackOutput)
+		fmt.Println("IsPush:", opcode.IsPush)
+		fmt.Println("Immediates:", opcode.Immediates)
+		fmt.Println("IsTerminating:", opcode.IsTerminating)
 	}
 }
