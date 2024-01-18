@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"os"
 	"strconv"
@@ -27,6 +28,11 @@ func main() {
 
 		if arg[:2] == "c:" {
 			code := arg[2:]
+			_, err := hex.DecodeString(code)
+			if err != nil {
+				fmt.Println("Error: ", err)
+				return
+			}
 			eofObject.AddCode(code)
 		}
 
@@ -54,6 +60,11 @@ func main() {
 
 				code_type := []int64{inputs, outputs}
 				code := code_contents[3]
+				_, err = hex.DecodeString(code)
+				if err != nil {
+					fmt.Println("Error: ", err)
+					return
+				}
 				eofObject.AddCodeWithType(code, code_type)
 			}
 		}
