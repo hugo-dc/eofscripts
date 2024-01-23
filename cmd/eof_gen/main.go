@@ -65,6 +65,16 @@ func main() {
 				eofObject.AddCodeWithType(code, code_type)
 			}
 		}
+		if arg[:2] == "K:" {
+			container := arg[2:]
+			_, err := hex.DecodeString(container)
+			if err != nil {
+				fmt.Println("Error: ", err)
+				return
+			}
+			eofObject.AddContainer(container)
+		}
+
 	}
 
 	eofObject.AddData(data)
