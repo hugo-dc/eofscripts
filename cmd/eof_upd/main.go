@@ -20,6 +20,6 @@ func main() {
 	}
 
 	eofCode := os.Args[1]
-	eofObject := common.ParseOldEOF(eofCode)
-	fmt.Println(eofObject.CodeNew(false))
+	eofObject, _ := common.ParseEOF(eofCode)
+	fmt.Println(eofObject.Code())
 }

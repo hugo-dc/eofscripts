@@ -64,5 +64,5 @@ func main() {
 			}
 		}
 	}
-	fmt.Println(eofObject.Code(false, true))
+	fmt.Println(eofObject.Code())
 }

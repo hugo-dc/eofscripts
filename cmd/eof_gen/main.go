@@ -13,13 +13,11 @@ import (
 func showUsage() {
 	fmt.Println("eof_gen - Generate EOF version of the provided EVM code")
 	fmt.Println("Usage:")
-	fmt.Println("\teof_gen d:[data] c:<code>|C:<input>:<outputs>:<code> [-t]")
+	fmt.Println("\teof_gen d:[data] c:<code>|C:<input>:<outputs>:<code>")
 }
 
 func main() {
 	data := ""
-	showTypes := false
-	oldCode := false
 	eofObject := common.NewEOFObject()
 	for _, arg := range os.Args {
 		if arg[:2] == "d:" {
@@ -37,7 +35,6 @@ func main() {
 		}
 
 		if arg[:2] == "C:" {
-			showTypes = true
 			code_contents := strings.Split(arg, ":")
 
 			if len(code_contents) != 4 {
@@ -68,21 +65,19 @@ func main() {
 				eofObject.AddCodeWithType(code, code_type)
 			}
 		}
-
-		if arg == "-t" {
-			showTypes = true
+		if arg[:2] == "K:" {
+			container := arg[2:]
+			_, err := hex.DecodeString(container)
+			if err != nil {
+				fmt.Println("Error: ", err)
+				return
+			}
+			eofObject.AddContainer(container)
 		}
 
-		if arg == "-o" {
-			oldCode = true
-		}
-	}
-
-	if !oldCode {
-		showTypes = true
 	}
 
 	eofObject.AddData(data)
-	eof_code := eofObject.Code(oldCode, showTypes)
+	eof_code := eofObject.Code()
 	fmt.Println(eof_code)
 }

@@ -17,9 +17,6 @@ type EOFObject struct {
 }
 
 const (
-	cOldCodeId    = 1
-	cOldDataId    = 2
-	cOldTypeId    = 3
 	CTypeId       = 1
 	CCodeId       = 2
 	CContainerId  = 3
@@ -36,11 +33,7 @@ func NewEOFObject() EOFObject {
 	}
 }
 
-func (eof *EOFObject) CodeNew(withTypes bool) string {
-	return eof.Code(false, withTypes)
-}
-
-func (eof *EOFObject) Code(old bool, withTypes bool) string {
+func (eof *EOFObject) Code() string {
 	eof_code := "ef00"
 
 	typeId := fmt.Sprintf("%02x", CTypeId)
@@ -48,32 +41,20 @@ func (eof *EOFObject) Code(old bool, withTypes bool) string {
 	containerId := fmt.Sprintf("%02x", CContainerId)
 	dataId := fmt.Sprintf("%02x", CDataId)
 
-	if old {
-		typeId = fmt.Sprintf("%02x", cOldTypeId)
-		codeId = fmt.Sprintf("%02x", cOldCodeId)
-		dataId = fmt.Sprintf("%02x", cOldDataId)
-	}
-
 	versionHex := fmt.Sprintf("%02x", eof.Version)
 	typesHeader := ""
 	if len(eof.Types) > 0 {
 		typesLengthHex := ""
-		if old {
-			typesLengthHex = fmt.Sprintf("%04x", len(eof.Types)*2)
-		} else {
-			typesLengthHex = fmt.Sprintf("%04x", len(eof.Types)*4)
-		}
+		typesLengthHex = fmt.Sprintf("%04x", len(eof.Types)*4)
 		typesHeader = typeId + typesLengthHex
 	}
 
 	codeHeaders := ""
-	oldCodeHeaders := ""
 	codeLengths := ""
 	numCodeSections := 0
 	for _, c := range eof.CodeSections {
 		codeLengthHex := fmt.Sprintf("%04x", len(c)/2)
 		codeLengths = codeLengths + codeLengthHex
-		oldCodeHeaders = oldCodeHeaders + codeId + codeLengthHex
 		numCodeSections += 1
 	}
 	numCodeSectionsHex := fmt.Sprintf("%04x", numCodeSections)
@@ -105,18 +86,14 @@ func (eof *EOFObject) Code(old bool, withTypes bool) string {
 		inputsHex := fmt.Sprintf("%02x", t[0])
 		outputsHex := fmt.Sprintf("%02x", t[1])
 
-		if old {
-			typeContents = typeContents + inputsHex + outputsHex
-		} else {
-			maxStackHeight, isNRF := calculateMaxStackAndNRF(i, eof.CodeSections[i], eof.Types)
+		maxStackHeight, isNRF := calculateMaxStackAndNRF(i, eof.CodeSections[i], eof.Types)
 
-			if isNRF { // Mark function as non-returning function
-				outputsHex = fmt.Sprintf("%02x", 0x80)
-			}
-
-			maxStackHeightHex := fmt.Sprintf("%04x", maxStackHeight)
-			typeContents = typeContents + inputsHex + outputsHex + maxStackHeightHex
+		if isNRF { // Mark function as non-returning function
+			outputsHex = fmt.Sprintf("%02x", 0x80)
 		}
+
+		maxStackHeightHex := fmt.Sprintf("%04x", maxStackHeight)
+		typeContents = typeContents + inputsHex + outputsHex + maxStackHeightHex
 	}
 
 	codeContents := ""
@@ -124,15 +101,7 @@ func (eof *EOFObject) Code(old bool, withTypes bool) string {
 		codeContents = codeContents + c
 	}
 
-	if withTypes == false && len(eof.Types) == 1 && old == true {
-		if len(eof.Data) > 0 {
-			eof_code = eof_code + versionHex + oldCodeHeaders + dataHeader + terminator + codeContents + eof.Data
-		} else {
-			eof_code = eof_code + versionHex + oldCodeHeaders + terminator + codeContents
-		}
-	} else {
-		eof_code = eof_code + versionHex + typesHeader + codeHeaders + containerHeader + dataHeader + terminator + typeContents + codeContents + containerContents + eof.Data
-	}
+	eof_code = eof_code + versionHex + typesHeader + codeHeaders + containerHeader + dataHeader + terminator + typeContents + codeContents + containerContents + eof.Data
 	return eof_code
 }
 
@@ -484,114 +453,4 @@ func ParseEOF(eof_code string) (EOFObject, error) {
 	}
 
 	return result, nil
-}
-
-func ParseOldEOF(eof_code string) EOFObject {
-	version := int64(0)
-	versionHex := ""
-	eof_code = strings.ToLower(eof_code)
-
-	codeHeaders := []int64{}
-	codeSections := []string{}
-	typesLength := int64(0)
-	types := [][]int64{}
-	dataLength := int64(0)
-	dataContent := ""
-
-	i := 0
-	for {
-		if i+2 > len(eof_code) {
-			break
-		}
-
-		bt := eof_code[i : i+2]
-		fmt.Println("bt: ", bt)
-
-		if versionHex == "" && bt != "ef" {
-			fmt.Println("Error: Invalid EOF code")
-			break
-		}
-
-		if versionHex == "" && bt == "ef" {
-			versionHex = eof_code[i+2 : i+6]
-			version, _ = strconv.ParseInt(versionHex, 16, 64)
-			i += 4
-		}
-
-		if bt == "03" {
-			fmt.Println(">types")
-			fmt.Println("code: ", eof_code[i:])
-			typesLengthHex := eof_code[i+2 : i+6]
-			typesLengthTmp, err := strconv.ParseInt(typesLengthHex, 16, 64)
-
-			if err != nil {
-				fmt.Println("Error: Invalid types legnth : ", err)
-			}
-
-			typesLength = typesLengthTmp
-			i += 4
-		}
-
-		if bt == "01" {
-			fmt.Println(">code")
-			fmt.Println("code: ", eof_code[i:])
-			codeLenHex := eof_code[i+2 : i+6]
-			codeLen, err := strconv.ParseInt(codeLenHex, 16, 64)
-
-			if err != nil {
-				fmt.Println("Error: Invalid code length :", err)
-			}
-
-			codeHeaders = append(codeHeaders, codeLen)
-			i += 4
-		}
-
-		if bt == "02" {
-			fmt.Println(">data")
-			fmt.Println("code: ", eof_code[i:])
-			dataLengthHex := eof_code[i+2 : i+6]
-			dataLength, _ = strconv.ParseInt(dataLengthHex, 16, 64)
-			i += 4
-		}
-
-		if bt == "00" { // Terminator
-			fmt.Println("> terminator")
-			fmt.Println("code: ", eof_code[i:])
-			// Extract Types
-			if typesLength > 0 {
-				for j := 0; j < int(typesLength); j += 2 {
-					inputsHex := eof_code[i+2 : i+4]
-					inputs, _ := strconv.ParseInt(inputsHex, 16, 64)
-					outputsHex := eof_code[i+4 : i+6]
-					outputs, _ := strconv.ParseInt(outputsHex, 16, 64)
-
-					types = append(types, []int64{inputs, outputs})
-					i += 4
-				}
-			}
-			fmt.Println("types: ", types)
-
-			i += 2
-			fmt.Println("code: ", eof_code[i:])
-			fmt.Println("codeHeaders: ", codeHeaders)
-			// Extract Code
-			for _, cH := range codeHeaders {
-				code := eof_code[i : i+int(cH)*2]
-				fmt.Println("codeX: ", code)
-				codeSections = append(codeSections, code)
-				i += int(cH) * 2
-			}
-
-			// Extract Data
-			dataContent = eof_code[i : i+int(dataLength)*2]
-			i += int(dataLength) * 2
-		}
-		i += 2
-	}
-	return EOFObject{
-		Version:      version,
-		CodeSections: codeSections,
-		Types:        types,
-		Data:         dataContent,
-	}
 }

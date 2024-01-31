@@ -71,5 +71,5 @@ func main() {
 		eofObject.AddCode(c)
 	}
 
-	fmt.Println(eofObject.Code(false, false))
+	fmt.Println(eofObject.Code())
 }
