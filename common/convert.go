@@ -269,6 +269,7 @@ func Mnem2Evm(mn string) string {
 	labels := make(map[string]int)
 	evm := make([]OpCall, 0)
 	pos := 0
+	multiplying := false
 	for _, token := range tokens {
 		token = strings.Trim(token, " ")
 		if token == "" {
@@ -278,6 +279,30 @@ func Mnem2Evm(mn string) string {
 			labels[token[:len(token)-1]] = pos
 			continue
 		}
+
+		if token == "*" {
+			multiplying = true
+			continue
+		}
+
+		if multiplying {
+			multiplying = false
+			value, err := strconv.ParseInt(token, 10, 64)
+			if err != nil {
+				fmt.Println(err)
+				return ""
+			}
+			if value < 1 {
+				fmt.Println("Error, invalid multiplier: ", token)
+				return ""
+			}
+			pevOpCall := evm[len(evm)-1]
+			for i := 0; i < int(value)-1; i++ {
+				evm = append(evm, pevOpCall)
+			}
+			continue
+		}
+
 		opcode := ""
 		immediate := ""
 		if strings.Contains(token, "(") {
