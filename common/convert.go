@@ -296,10 +296,11 @@ func Mnem2Evm(mn string) string {
 				fmt.Println("Error, invalid multiplier: ", token)
 				return ""
 			}
-			pevOpCall := evm[len(evm)-1]
+			prevOpCall := evm[len(evm)-1]
 			for i := 0; i < int(value)-1; i++ {
-				evm = append(evm, pevOpCall)
+				evm = append(evm, prevOpCall)
 			}
+			pos += int(value) - 1
 			continue
 		}
 
