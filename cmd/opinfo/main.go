@@ -20,6 +20,7 @@ func showUsage() {
 	fmt.Println("    --is-push\t\tReturns true if opcode is a PUSH opcode")
 	fmt.Println("    --immediates\tReturns the number of bytes the opcodes requires as immediates")
 	fmt.Println("    --is-terminating\tReturns true if opcode is a terminating opcode")
+	fmt.Println("    --all\t\tShow all information")
 }
 
 func main() {
@@ -74,7 +75,7 @@ func main() {
 	case "--outputs":
 		fmt.Println(opcode.StackOutput)
 	case "--is-push":
-		if opcode.Code >= 0x60 && opcode.Code <= 0x7f {
+		if opcode.IsPush() {
 			fmt.Println("true")
 		} else {
 			fmt.Println("false")
@@ -92,7 +93,7 @@ func main() {
 		fmt.Println("Hex:", fmt.Sprintf("0x%02x", opcode.Code))
 		fmt.Println("Inputs:", opcode.StackInput)
 		fmt.Println("Outputs:", opcode.StackOutput)
-		fmt.Println("IsPush:", opcode.IsPush)
+		fmt.Println("IsPush:", opcode.IsPush())
 		fmt.Println("Immediates:", opcode.Immediates)
 		fmt.Println("IsTerminating:", opcode.IsTerminating)
 	default:
