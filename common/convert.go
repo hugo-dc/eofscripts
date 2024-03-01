@@ -256,7 +256,7 @@ func opcode2evm(opcode string, immediate string) (OpCall, error) {
 	return opCall, nil
 }
 
-func Mnem2Evm(mn string) string {
+func Mnem2Evm(mn string) (string, error) {
 	tokens := strings.Split(mn, " ")
 
 	labels := make(map[string]int)
@@ -282,12 +282,10 @@ func Mnem2Evm(mn string) string {
 			multiplying = false
 			value, err := strconv.ParseInt(token, 10, 64)
 			if err != nil {
-				fmt.Println(err)
-				return ""
+				return "", err
 			}
 			if value < 1 {
-				fmt.Println("Error, invalid multiplier: ", token)
-				return ""
+				return "", errors.New("Invalid multiplier")
 			}
 			prevOpCall := evm[len(evm)-1]
 			for i := 0; i < int(value)-1; i++ {
@@ -304,16 +302,14 @@ func Mnem2Evm(mn string) string {
 			opcode = elements[0]
 			immediate = elements[1][0 : len(elements[1])-1]
 			if elements[1][len(elements[1])-1] != ')' {
-				fmt.Println("Error: Invalid immediate at instruction: ", token)
-				fmt.Println("\tSpaces not allowed in immediate")
-				return ""
+				return "", errors.New("Invalid immediate: " + token)
 			}
 		} else {
 			opcode = token
 		}
 		opCall, err := opcode2evm(opcode, immediate)
 		if err != nil {
-			return ""
+			return "", err
 		}
 		evm = append(evm, opCall)
 		if opCall.OpCode.Name == "RJUMPV" {
@@ -363,8 +359,7 @@ func Mnem2Evm(mn string) string {
 			}
 		}
 	}
-
-	return result
+	return result, nil
 }
 
 func NewEOFObjectModifier() EOFObjectModifier {

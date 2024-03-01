@@ -20,6 +20,10 @@ func main() {
 	}
 
 	mnems := os.Args[1]
-	evm := common.Mnem2Evm(mnems)
+	evm, err := common.Mnem2Evm(mnems)
+	if err != nil {
+		fmt.Println("Error: ", err)
+		return
+	}
 	fmt.Println(evm)
 }
