@@ -20,8 +20,11 @@ func main() {
 	}
 
 	bytecode := os.Args[1]
-	opcalls, err := common.DescribeBytecode(bytecode)
+	if bytecode[:2] == "0x" {
+		bytecode = bytecode[2:]
+	}
 
+	opcalls, err := common.DescribeBytecode(bytecode)
 	if err != nil {
 		fmt.Println("Error: ", err)
 	} else {
