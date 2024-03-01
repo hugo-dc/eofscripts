@@ -303,6 +303,11 @@ func Mnem2Evm(mn string) string {
 			elements := strings.Split(token, "(")
 			opcode = elements[0]
 			immediate = elements[1][0 : len(elements[1])-1]
+			if elements[1][len(elements[1])-1] != ')' {
+				fmt.Println("Error: Invalid immediate at instruction: ", token)
+				fmt.Println("\tSpaces not allowed in immediate")
+				return ""
+			}
 		} else {
 			opcode = token
 		}
