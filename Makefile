@@ -1,6 +1,6 @@
 all: build install
-build: build-eof_gen build-eof_mod build-eof_upd build-mnem2evm build-evm2mnem build-opinfo build-oplist build-eof_dasm build-eof_desc build-eof_fuzz_gen
-install: install-eof_gen install-eof_mod install-eof_upd install-mnem2evm install-evm2mnem install-opinfo install-oplist install-eof_dasm install-eof_desc install-eof_fuzz_gen
+build: build-eof_gen build-eof_mod build-mnem2evm build-evm2mnem build-opinfo build-oplist build-eof_dasm build-eof_desc build-eof_fuzz_gen
+install: install-eof_gen install-eof_mod install-mnem2evm install-evm2mnem install-opinfo install-oplist install-eof_dasm install-eof_desc install-eof_fuzz_gen
 build-returnevm:
 	go build -o ./build/ ./cmd/returnevm
 build-deploy:
@@ -11,8 +11,6 @@ build-eof_gen:
 	go build -o ./build/ ./cmd/eof_gen
 build-eof_mod:
 	go build -o ./build/ ./cmd/eof_mod
-build-eof_upd:
-	go build -o ./build/ ./cmd/eof_upd
 build-mnem2evm:
 	go build -o ./build/ ./cmd/mnem2evm
 build-evm2mnem:
@@ -31,8 +29,6 @@ install-eof_gen:
 	go install ./cmd/eof_gen
 install-eof_mod:
 	go install ./cmd/eof_mod
-install-eof_upd:
-	go install ./cmd/eof_upd
 install-mnem2evm:
 	go install ./cmd/mnem2evm
 install-evm2mnem:
