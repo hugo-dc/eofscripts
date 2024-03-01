@@ -438,7 +438,12 @@ func ParseEOF(eof_code string) (EOFObject, error) {
 			}
 
 			// Extract data
-			dataContent = eof_code[i : i+int(dataLength)*2]
+			if int(dataLength)*2 > len(eof_code) {
+				//dataContent = eof_code[i : len(eof_code)/2-i]
+				return result, errors.New("Invalid data length")
+			} else {
+				dataContent = eof_code[i : i+int(dataLength)*2]
+			}
 			result.Data = dataContent
 			i += int(dataLength) * 2
 

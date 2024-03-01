@@ -20,6 +20,12 @@ func main() {
 	}
 
 	bytecode := os.Args[1]
-	mnem := common.Evm2Mnem(bytecode)
-	fmt.Println(mnem)
+	opcalls, err := common.DescribeBytecode(bytecode)
+
+	if err != nil {
+		fmt.Println("Error: ", err)
+	} else {
+		mnem := common.Evm2Mnem(opcalls)
+		fmt.Println(mnem)
+	}
 }

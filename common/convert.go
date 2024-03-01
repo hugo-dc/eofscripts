@@ -107,16 +107,9 @@ func DescribeBytecode(bytecode string) ([]OpCall, error) {
 	return result, nil
 }
 
-// TODO: receive []OpCall
-func Evm2Mnem(bytecode string) string {
-	ops, err := DescribeBytecode(bytecode)
-
-	if err != nil {
-		panic(err)
-	}
-
+func Evm2Mnem(opcalls []OpCall) string {
 	result := ""
-	for _, op := range ops {
+	for _, op := range opcalls {
 		result += op.Name
 
 		if op.OpCode.Immediates == 1 {

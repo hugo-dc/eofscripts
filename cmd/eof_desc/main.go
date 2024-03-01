@@ -22,7 +22,7 @@ func describeCode(code string) {
 			panic(err)
 		}
 
-		asm := common.Evm2Mnem(bc)
+		asm := common.Evm2Mnem([]common.OpCall{opc})
 		fmt.Println(fmt.Sprintf("% 6v # [%v] %v", bc, opc.Position, asm))
 	}
 }
@@ -36,7 +36,8 @@ func main() {
 	eofObject, err := common.ParseEOF(eof_code)
 
 	if err != nil {
-		panic(err)
+		fmt.Println("Error: ", err)
+		return
 	}
 
 	// Print the EOF object
