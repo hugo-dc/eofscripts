@@ -1,12 +1,10 @@
 all: build install
-build: build-idcost build-returnevm build-returneofdata build-deploy build-call build-eof_gen build-eof_mod build-eof_upd build-yulreturn build-gentruncpush build-createaddress build-createaddress2 build-mnem2evm build-evm2mnem build-opinfo build-oplist build-eof_dasm build-eof_desc build-eof_fuzz_gen
-install: install-idcost install-returnevm install-returneofdata install-deploy install-call install-eof_gen install-eof_mod install-eof_upd install-yulreturn install-gentruncpush install-createaddress install-createaddress2 install-mnem2evm install-evm2mnem install-opinfo install-oplist install-eof_dasm install-eof_desc install-eof_fuzz_gen
+build: build-idcost build-returnevm build-deploy build-call build-eof_gen build-eof_mod build-eof_upd build-yulreturn build-gentruncpush build-createaddress build-createaddress2 build-mnem2evm build-evm2mnem build-opinfo build-oplist build-eof_dasm build-eof_desc build-eof_fuzz_gen
+install: install-idcost install-returnevm install-deploy install-call install-eof_gen install-eof_mod install-eof_upd install-yulreturn install-gentruncpush install-createaddress install-createaddress2 install-mnem2evm install-evm2mnem install-opinfo install-oplist install-eof_dasm install-eof_desc install-eof_fuzz_gen
 build-idcost:
 	go build -o ./build/ ./cmd/idcost
 build-returnevm:
 	go build -o ./build/ ./cmd/returnevm
-build-returneofdata:
-	go build -o ./build/ ./cmd/returneofdata
 build-deploy:
 	go build -o ./build/ ./cmd/deploy
 build-call:
@@ -43,8 +41,6 @@ install-idcost:
 	go install ./cmd/idcost
 install-returnevm:
 	go install ./cmd/returnevm
-install-returneofdata:
-	go install ./cmd/returneofdata
 install-deploy:
 	go install ./cmd/deploy
 install-call:
