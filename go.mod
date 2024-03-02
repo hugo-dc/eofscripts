@@ -1,4 +1,4 @@
-module github.com/hugo-dc/ethscripts
+module github.com/hugo-dc/eofscripts
 
 go 1.18
 

@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hugo-dc/ethscripts/common"
+	"github.com/hugo-dc/eofscripts/common"
 )
 
 func showUsage() {
