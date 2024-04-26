@@ -28,7 +28,18 @@ func describeCode(code string) {
 }
 
 func main() {
-	eof_code := strings.Join(os.Args[1:], " ")
+	eof_code := ""
+	if len(os.Args) < 2 {
+		fmt.Scanln(&eof_code)
+	} else {
+		stdin_input := ""
+		fmt.Scanln(&stdin_input)
+		if len(stdin_input) > 0 {
+			fmt.Println("Error: No arguments allowed when reading from stdin")
+			return
+		}
+		eof_code = strings.Join(os.Args[1:], " ")
+	}
 	if eof_code[:2] == "0x" {
 		eof_code = eof_code[2:]
 	}
