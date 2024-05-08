@@ -184,6 +184,8 @@ var opcodes = []OpCode{
 	{Name: "CALLF", Code: 0xe3, Immediates: 2, StackInput: 0, StackOutput: 0, IsTerminating: false},
 	{Name: "RETF", Code: 0xe4, Immediates: 0, StackInput: 0, StackOutput: 0, IsTerminating: true},
 	{Name: "JUMPF", Code: 0xe5, Immediates: 2, StackInput: 0, StackOutput: 0, IsTerminating: false},
+	{Name: "DUPN", Code: 0xe6, Immediates: 1, StackInput: 0, StackOutput: 1, IsTerminating: false},
+	{Name: "SWAPN", Code: 0xe7, Immediates: 1, StackInput: 0, StackOutput: 0, IsTerminating: false},
 	{Name: "EXCHANGE", Code: 0xe8, Immediates: 1, StackInput: 0, StackOutput: 0, IsTerminating: false},
 	{Name: "CREATE3", Code: 0xec, Immediates: 1, StackInput: 4, StackOutput: 1, IsTerminating: false},
 	{Name: "CREATE4", Code: 0xed, Immediates: 0, StackInput: 5, StackOutput: 1, IsTerminating: false},
