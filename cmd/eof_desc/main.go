@@ -8,8 +8,9 @@ import (
 	"github.com/hugo-dc/eofscripts/common"
 )
 
-func describeCode(code string) {
+func describeCode(code string) string {
 	ops, err := common.DescribeBytecode(code)
+	code_desc := ""
 
 	if err != nil {
 		panic(fmt.Sprintf("%v: code %s", err, code))
@@ -17,14 +18,14 @@ func describeCode(code string) {
 
 	for _, opc := range ops {
 		bc, err := opc.ToBytecode()
-
 		if err != nil {
 			panic(err)
 		}
 
 		asm := common.Evm2Mnem([]common.OpCall{opc})
-		fmt.Println(fmt.Sprintf("% 6v # [%v] %v", bc, opc.Position, asm))
+		code_desc += fmt.Sprintf("%6s # [%v] %v\n", bc, opc.Position, asm)
 	}
+	return code_desc
 }
 
 func main() {
@@ -52,44 +53,46 @@ func main() {
 	}
 
 	// Print the EOF object
-	fmt.Println("EF00"+fmt.Sprintf("%02x", eofObject.Version), "# Magic and Version (", eofObject.Version, ")")
-	fmt.Println(fmt.Sprintf("%02x%04x", common.CTypeId, len(eofObject.Types)*4), "# Types length (", len(eofObject.Types)*4, ")")
-	fmt.Println(fmt.Sprintf("%02x%04x", common.CCodeId, len(eofObject.CodeSections)), "# Total code sections (", len(eofObject.CodeSections), ")")
-
+	code_section_headers := ""
 	for i, v := range eofObject.CodeSections {
-		fmt.Println(fmt.Sprintf("  %04x", len(v)/2), "# Code section ", i, ",", len(v)/2, " bytes")
+		code_section_headers += fmt.Sprintf("  %04x ", len(v)/2) + fmt.Sprintf("# Code section %v, %v bytes\n", i, len(v)/2)
 	}
 
+	container_section_headers := ""
 	if len(eofObject.ContainerSections) > 0 {
-		fmt.Println(fmt.Sprintf("%02x%04x", common.CContainerId, len(eofObject.ContainerSections)), "# Total container sections (", len(eofObject.ContainerSections), ")")
+		container_section_headers += fmt.Sprintf("%02x%04x", common.CContainerId, len(eofObject.ContainerSections)) + fmt.Sprintf("# Total container sections (%i)\n", len(eofObject.ContainerSections))
 		for i, v := range eofObject.ContainerSections {
-			fmt.Println(fmt.Sprintf("  %04x", len(v)/2), "# Container section ", i, ",", len(v)/2, " bytes")
+			container_section_headers += fmt.Sprintf("  %04x", len(v)/2) + fmt.Sprintf("# Container section %i, $i bytes\n", i, len(v)/2)
 		}
 	}
-	fmt.Println(fmt.Sprintf("%02x%04x", common.CDataId, len(eofObject.Data)/2), "# Data section length (", len(eofObject.Data)/2, ")")
-	fmt.Println(fmt.Sprintf("    %02x # Terminator (end of header)", common.CTerminatorId))
+	if container_section_headers == "" {
+		container_section_headers = "       # No container sections"
+	}
 
+	types_headers := ""
 	for i, v := range eofObject.Types {
-		fmt.Println("       # Code", i, "types")
-		fmt.Println(fmt.Sprintf("    %02x", v[0]), "#", v[0], "inputs")
+		types_headers += fmt.Sprintf("       # Code %v types\n", i) +
+			fmt.Sprintf("    %02x", v[0]) + fmt.Sprintf(" # %v inputs\n", v[0])
 		if v[1] == 0x80 {
-			fmt.Println(fmt.Sprintf("    %02x", v[1]), "# 0 outputs", "(Non-returning function)")
+			types_headers += fmt.Sprintf("    %02x", v[1]) + " # 0 outputs (Non-returning function)\n"
 		} else {
-			fmt.Println(fmt.Sprintf("    %02x", v[1]), "#", v[1], "outputs")
+			types_headers += fmt.Sprintf("    %02x", v[1]) + fmt.Sprintf(" # %v outputs\n", v[1])
 		}
-		fmt.Println(fmt.Sprintf("  %04x", v[2]), "#", "max stack:", v[2])
+		types_headers += fmt.Sprintf("  %04x", v[2]) + fmt.Sprintf(" # max_stack: %v\n", v[2])
 	}
 
+	code_sections := ""
 	for i, v := range eofObject.CodeSections {
-		fmt.Println("       # Code section", i)
-		describeCode(v)
+		code_sections += fmt.Sprintf("       # Code section %v\n", i)
+		code_sections += describeCode(v)
 	}
 
+	container_sections := ""
 	if len(eofObject.ContainerSections) > 0 {
-		fmt.Println("       # Container sections")
+		container_sections += "       # Container sections"
 		for i, v := range eofObject.ContainerSections {
-			fmt.Println("       # Container section", i)
-			fmt.Println(v)
+			container_sections += fmt.Sprintf("       # Container section", i)
+			container_sections += v
 			//describeCode(v)
 		}
 	}
@@ -99,8 +102,30 @@ func main() {
 		comment = "(empty)"
 	}
 
-	fmt.Println("       # Data section", comment)
-	fmt.Println(eofObject.Data)
+	data_section := fmt.Sprintf("       # Data section %s\n", comment)
+	data_section += eofObject.Data
+
+	eof_desc := ""
+	if len(eofObject.ContainerSections) == 0 {
+		eof_desc = `EF00%02x # Magic and Version (%v)
+%02x%04x # Types length (%v)
+%02x%04x # Total code sections (%v)
+%s%02x%04x # Data section length (%v)
+    %02x # Terminator (end of header)
+%s%s%s
+`
+		fmt.Print(fmt.Sprintf(eof_desc, eofObject.Version, eofObject.Version, common.CTypeId, len(eofObject.Types)*4, len(eofObject.Types)*4, common.CCodeId, len(eofObject.CodeSections), len(eofObject.CodeSections), code_section_headers, common.CDataId, len(eofObject.Data)/2, len(eofObject.Data)/2, common.CTerminatorId, types_headers, code_sections, data_section))
+	} else {
+		eof_desc = `EF00%02x # Magic and Version (%v)	
+%02x%04x # Types length (%v)
+%02x%04x # Total code sections (%v)
+%s%s%02x%04x # Total container sections (%v)
+%s%s%s
+`
+
+		fmt.Print(fmt.Sprintf(eof_desc, eofObject.Version, eofObject.Version, common.CTypeId, len(eofObject.Types)*4, len(eofObject.Types)*4, common.CCodeId, len(eofObject.CodeSections), code_section_headers, container_section_headers, common.CDataId, len(eofObject.Data)/2, len(eofObject.Data)/2, len(eofObject.ContainerSections), types_headers, code_sections, container_sections, data_section))
+	}
+
 	/*
 		for i, v := range eofObject.ContainerSections {
 			fmt.Println("       # Container section", i)

@@ -449,6 +449,9 @@ func ParseEOF(eof_code string) (EOFObject, error) {
 
 			// Extract containers
 			for _, ch := range containerHeaders {
+				if len(eof_code) < i+int(ch)*2 {
+					return result, errors.New("Invalid container length")
+				}
 				container := eof_code[i : i+int(ch)*2]
 				result.AddContainer(container)
 				i += int(ch) * 2

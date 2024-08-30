@@ -107,10 +107,12 @@ func DescribeBytecode(bytecode string) ([]OpCall, error) {
 	return result, nil
 }
 
-func Evm2Mnem(opcalls []OpCall) string {
+func Evm2Asm(opcalls []OpCall, prefix string, imm_indicators []string) string {
 	result := ""
+	par_op := imm_indicators[0]
+	par_cl := imm_indicators[1]
 	for _, op := range opcalls {
-		result += op.Name
+		result += prefix + op.Name
 
 		if op.OpCode.Immediates == 1 {
 			immInt, err := strconv.ParseInt(op.Immediates[0].Immediate, 16, 64)
@@ -132,29 +134,29 @@ func Evm2Mnem(opcalls []OpCall) string {
 					}
 
 					if immInt == 0 {
-						result = result + fmt.Sprintf("(%d)", immInt2)
+						result = result + fmt.Sprintf("%v%d%v", par_op, immInt2, par_cl)
 					} else if i == 0 {
-						result = result + fmt.Sprintf("(%d,", immInt2)
+						result = result + fmt.Sprintf("%v%d,", par_op, immInt2)
 					} else if i == int(immInt) {
-						result = result + fmt.Sprintf("%d)", immInt2)
+						result = result + fmt.Sprintf("%d%v", immInt2, par_cl)
 					} else {
 						result = result + fmt.Sprintf("%d,", immInt2)
 					}
 				}
 			} else {
-				result = result + fmt.Sprintf("(%d)", immInt)
+				result = result + fmt.Sprintf("%v%d%v", par_op, immInt, par_cl)
 			}
 		} else if op.OpCode.Immediates > 1 {
 			immediate := op.Immediates[0].Immediate
 			imm, err := strconv.ParseInt(immediate, 16, 64)
 
 			if err != nil {
-				result = result + "(0x" + immediate + ")"
+				result = result + par_op + "0x" + immediate + par_cl
 			} else {
 				if imm > 32767 {
 					imm = ((65535 - imm) + 1) * -1
 				}
-				result = result + "(" + strconv.Itoa(int(imm)) + ")"
+				result = result + par_op + strconv.Itoa(int(imm)) + par_cl
 			}
 		}
 
@@ -162,6 +164,15 @@ func Evm2Mnem(opcalls []OpCall) string {
 	}
 
 	return result
+
+}
+
+func Evm2Mnem(opcalls []OpCall) string {
+	return Evm2Asm(opcalls, "", []string{"(", ")"})
+}
+
+func Evm2PyAsm(opcalls []OpCall) string {
+	return Evm2Asm(opcalls, "Op.", []string{"[", "]"})
 }
 
 func opcode2evm(opcode string, immediate string) (OpCall, error) {
