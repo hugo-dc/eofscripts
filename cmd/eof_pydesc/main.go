@@ -117,16 +117,18 @@ func main() {
 		for i, v := range eofObject.ContainerSections {
 			raw_bytecode := ""
 			for i := 0; i < len(v); i += 2 {
-				raw_bytecode += fmt.Sprintf("0x%s, ", v[i:i+2])
+				separator := ", "
+				if i == len(v)-2 {
+					separator = ""
+				}
+				raw_bytecode += fmt.Sprintf("0x%s%s", v[i:i+2], separator)
 			}
 
 			container_sections = fmt.Sprintf(`  Section.Container(
           container=Container(
               name="EOFV1_SUBCONTAINER_%v",
               raw_bytes=bytes(
-                  [
-                      %s
-              ])
+                  [ %s ])
           )
       ])
 `, i+0, raw_bytecode)
