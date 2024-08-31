@@ -23,10 +23,10 @@ func opEqual(op1 common.OpCall, op2 common.OpCall) bool {
 	return true
 }
 
-func describeCode(code string) string {
+func describeCode(code string) (string, error) {
 	ops, err := common.DescribeBytecode(code)
 	if err != nil {
-		panic(fmt.Sprintf("%v: code %s", err, code))
+		return "", err
 	}
 
 	prev_op := common.OpCall{}
@@ -62,8 +62,7 @@ func describeCode(code string) string {
 		}
 	*/
 	descriptions = append(descriptions, code_desc)
-
-	return strings.Join(descriptions, "+ ")
+	return strings.Join(descriptions, "+ "), nil
 }
 
 func main() {
@@ -94,7 +93,7 @@ func main() {
 	pyeof_code := `Container(
   name = 'EOFV0001',
   sections = [
-    %s%s  ],
+    %s%s%s  ],
   kind=ContainerKind.RUNTIME
 )
 `
@@ -103,8 +102,35 @@ func main() {
 	for i, v := range eofObject.CodeSections {
 		// Get Max Stack Height
 		max_stack_height := eofObject.Types[i][2]
-		code := describeCode(v)
+		code := ""
+		code_description, err := describeCode(v)
+		if err != nil {
+			code = v + "\n"
+		} else {
+			code = code_description
+		}
 		code_sections += fmt.Sprintf("  Section.Code(code=%s, max_stack_height=%v),\n    ", code, max_stack_height)
+	}
+
+	container_sections := ""
+	if len(eofObject.ContainerSections) > 0 {
+		for i, v := range eofObject.ContainerSections {
+			raw_bytecode := ""
+			for i := 0; i < len(v); i += 2 {
+				raw_bytecode += fmt.Sprintf("0x%s, ", v[i:i+2])
+			}
+
+			container_sections = fmt.Sprintf(`  Section.Container(
+          container=Container(
+              name="EOFV1_SUBCONTAINER_%v",
+              raw_bytes=bytes(
+                  [
+                      %s
+              ])
+          )
+      ])
+`, i+0, raw_bytecode)
+		}
 	}
 
 	data_section := ""
@@ -112,6 +138,6 @@ func main() {
 		data_section += fmt.Sprintf("  Section.Data(data=\"%s\")\n", eofObject.Data)
 	}
 
-	fmt.Printf(pyeof_code, code_sections, data_section)
+	fmt.Printf(pyeof_code, code_sections, container_sections, data_section)
 
 }
