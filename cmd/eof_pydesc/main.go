@@ -130,8 +130,8 @@ func main() {
               raw_bytes=bytes(
                   [ %s ])
           )
-      )
-`, i+0, raw_bytecode)
+      ),
+    `, i+0, raw_bytecode)
 		}
 	}
 
