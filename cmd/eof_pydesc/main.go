@@ -67,16 +67,23 @@ func describeCode(code string) (string, error) {
 
 func main() {
 	eof_code := ""
+	container_kind := "RUNTIME"
 	if len(os.Args) < 2 {
 		fmt.Scanln(&eof_code)
 	} else {
 		stdin_input := ""
 		fmt.Scanln(&stdin_input)
-		if len(stdin_input) > 0 {
+		arg1 := os.Args[1]
+		if len(stdin_input) > 1 && arg1 != "--initcode" {
 			fmt.Println("Error: No arguments allowed when reading from stdin")
 			return
 		}
-		eof_code = strings.Join(os.Args[1:], " ")
+		if arg1 == "--initcode" {
+			container_kind = "INITCODE"
+			eof_code = stdin_input
+		} else {
+			eof_code = strings.Join(os.Args[1:], " ")
+		}
 	}
 	if eof_code[:2] == "0x" {
 		eof_code = eof_code[2:]
@@ -94,7 +101,7 @@ func main() {
   name = 'EOFV0001',
   sections = [
     %s%s%s  ],
-  kind=ContainerKind.RUNTIME
+  kind=ContainerKind.%s
 )
 `
 
@@ -140,6 +147,6 @@ func main() {
 		data_section += fmt.Sprintf("  Section.Data(data=\"%s\")\n", eofObject.Data)
 	}
 
-	fmt.Printf(pyeof_code, code_sections, container_sections, data_section)
+	fmt.Printf(pyeof_code, code_sections, container_sections, data_section, container_kind)
 
 }
