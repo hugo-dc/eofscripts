@@ -437,16 +437,6 @@ func ParseEOF(eof_code string) (EOFObject, error) {
 				i += int(ch) * 2
 			}
 
-			// Extract data
-			if int(dataLength)*2 > len(eof_code) {
-				//dataContent = eof_code[i : len(eof_code)/2-i]
-				return result, errors.New("Invalid data length")
-			} else {
-				dataContent = eof_code[i : i+int(dataLength)*2]
-			}
-			result.Data = dataContent
-			i += int(dataLength) * 2
-
 			// Extract containers
 			for _, ch := range containerHeaders {
 				if len(eof_code) < i+int(ch)*2 {
@@ -456,6 +446,16 @@ func ParseEOF(eof_code string) (EOFObject, error) {
 				result.AddContainer(container)
 				i += int(ch) * 2
 			}
+
+			// Extract data
+			if int(dataLength)*2 > len(eof_code) {
+				//dataContent = eof_code[i : len(eof_code)/2-i]
+				return result, errors.New("Invalid data length")
+			} else {
+				dataContent = eof_code[i : i+int(dataLength)*2]
+			}
+			result.Data = dataContent
+			i += int(dataLength) * 2
 		}
 		i += 2
 	}

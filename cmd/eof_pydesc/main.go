@@ -131,7 +131,7 @@ func main() {
 				raw_bytecode += fmt.Sprintf("0x%s%s", v[i:i+2], separator)
 			}
 
-			container_sections = fmt.Sprintf(`  Section.Container(
+			container_sections += fmt.Sprintf(`  Section.Container(
           container=Container(
               name="EOFV1_SUBCONTAINER_%v",
               raw_bytes=bytes(
