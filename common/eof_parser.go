@@ -142,6 +142,26 @@ func (eof *EOFObject) AddDefaultType() bool {
 	}
 }
 
+func RawBytecodeToSimpleFormat(code string) (string, error) {
+	ops, err := BytecodeToOpCalls(code)
+	code_desc := ""
+
+	if err != nil {
+		return code_desc, err
+	}
+
+	for _, opc := range ops {
+		bc, err := opc.ToBytecode()
+		if err != nil {
+			panic(err)
+		}
+
+		asm := Evm2Mnem([]OpCall{opc})
+		code_desc += fmt.Sprintf("%6s # [%v] %v\n", bc, opc.Position, asm)
+	}
+	return code_desc, nil
+}
+
 func RawBytecodeToPythonFormat(code string) (string, error) {
 	ops, err := BytecodeToOpCalls(code)
 	if err != nil {
@@ -184,14 +204,111 @@ func RawBytecodeToPythonFormat(code string) (string, error) {
 	return strings.Join(descriptions, "+ "), nil
 }
 
+func (eof *EOFObject) Describe() string {
+	code_section_headers := ""
+	for i, v := range eof.CodeSections {
+		code_section_headers += fmt.Sprintf("  %04x ", len(v)/2) + fmt.Sprintf("# Code section %v, %v bytes\n", i, len(v)/2)
+	}
+
+	container_section_headers := ""
+	if len(eof.ContainerSections) > 0 {
+		container_section_headers = fmt.Sprintf("%02x%04x # Total container sections (%v)\n", CContainerId, len(eof.ContainerSections), len(eof.ContainerSections))
+		for i, v := range eof.ContainerSections {
+			container_section_headers += fmt.Sprintf("  %04x # Container section %v, %v bytes\n", len(v)/2, i, len(v)/2)
+		}
+	}
+	if container_section_headers == "" {
+		container_section_headers = "       # No container sections"
+	}
+
+	types_headers := ""
+	for i, v := range eof.Types {
+		types_headers += fmt.Sprintf("       # Code %v types\n", i) +
+			fmt.Sprintf("    %02x", v[0]) + fmt.Sprintf(" # %v inputs\n", v[0])
+		if v[1] == 0x80 {
+			types_headers += fmt.Sprintf("    %02x", v[1]) + " # 0 outputs (Non-returning function)\n"
+		} else {
+			types_headers += fmt.Sprintf("    %02x", v[1]) + fmt.Sprintf(" # %v outputs\n", v[1])
+		}
+		types_headers += fmt.Sprintf("  %04x", v[2]) + fmt.Sprintf(" # max_stack: %v\n", v[2])
+	}
+
+	code_sections := ""
+	for i, v := range eof.CodeSections {
+		code_sections += fmt.Sprintf("       # Code section %v\n", i)
+		code_description, err := RawBytecodeToSimpleFormat(v)
+		if err != nil {
+			code_sections += v
+		} else {
+			code_sections += code_description
+		}
+	}
+
+	container_sections := ""
+	if len(eof.ContainerSections) > 0 {
+		container_sections += "       # Container sections\n"
+		for i, v := range eof.ContainerSections {
+			container_sections += fmt.Sprintf("       #   Container section %v\n", i)
+			code_description, err := RawBytecodeToSimpleFormat(v)
+			if err != nil {
+				container_sections += v + "\n"
+			} else {
+				container_sections += code_description
+			}
+		}
+	}
+
+	comment := ""
+	if len(eof.Data) == 0 {
+		comment = "(empty)"
+	}
+
+	data_section := fmt.Sprintf("       # Data section %s\n", comment)
+	data_section += eof.Data
+
+	eof_desc := ""
+	if len(eof.ContainerSections) == 0 {
+		eof_desc = `EF00%02x # Magic and Version (%v)
+%02x%04x # Types length (%v)
+%02x%04x # Total code sections (%v)
+%s%02x%04x # Data section length (%v)
+    %02x # Terminator (end of header)
+%s%s%s
+`
+		eof_desc = fmt.Sprint(fmt.Sprintf(eof_desc, eof.Version, eof.Version, CTypeId, len(eof.Types)*4, len(eof.Types)*4, CCodeId, len(eof.CodeSections), len(eof.CodeSections), code_section_headers, CDataId, len(eof.Data)/2, len(eof.Data)/2, CTerminatorId, types_headers, code_sections, data_section))
+	} else {
+		eof_desc = `EF00%02x # Magic and Version (%v)	
+%02x%04x # Types length (%v)
+%02x%04x # Total code sections (%v)
+%s%s%02x%04x # Data section length (%v)
+%s%s%s%s
+`
+
+		eof_desc = fmt.Sprint(fmt.Sprintf(eof_desc, eof.Version, eof.Version, CTypeId, len(eof.Types)*4, len(eof.Types)*4, CCodeId, len(eof.CodeSections), len(eof.CodeSections), code_section_headers, container_section_headers, CDataId, len(eof.Data)/2, len(eof.Data)/2, types_headers, code_sections, container_sections, data_section))
+	}
+	return eof_desc
+}
+
 func (eof *EOFObject) DescribeAsPython() string {
-	pyeof_code := `Container(
+	pyeof_code := ""
+
+	if len(eof.ContainerSections) == 0 {
+		pyeof_code = `Container(
   name = 'EOFV0001',
   sections = [
     %s%s%s  ],
   kind=ContainerKind.%s
 )
 `
+	} else {
+		pyeof_code = `Container(
+  name = 'EOFV0001',
+  sections = [
+    %s%s%s  
+  ],
+  kind=ContainerKind.%s
+)`
+	}
 	code_sections := ""
 	for i, v := range eof.CodeSections {
 		// Get Max Stack Height
@@ -231,10 +348,9 @@ func (eof *EOFObject) DescribeAsPython() string {
     `, i+0, raw_bytecode)
 			} else {
 				subcontainer := formatted_subcontainer.DescribeAsPython()
-				container_sections += fmt.Sprintf(`  Section.Container(
-				  %s
-			),
-		`, subcontainer)
+				subcontainer = strings.Replace(subcontainer, "\n", "\n        ", -1)
+				container_sections += fmt.Sprintf(`  Section.Container(container=%s
+      ),`, subcontainer)
 			}
 		}
 	}
@@ -412,6 +528,7 @@ func ParseEOF(eof_code string) (EOFObject, error) {
 	version := int64(0)
 	versionHex := ""
 	eof_code = strings.ToLower(eof_code)
+	fmt.Println("EOF code: ", eof_code)
 
 	typesLength := int64(0)
 	types := [][]int64{}
@@ -565,7 +682,13 @@ func ParseEOF(eof_code string) (EOFObject, error) {
 				//dataContent = eof_code[i : len(eof_code)/2-i]
 				return result, errors.New("Invalid data length")
 			} else {
-				dataContent = eof_code[i : i+int(dataLength)*2]
+				fmt.Println("Data length: ", dataLength)
+				if i+int(dataLength)*2 > len(eof_code) {
+					return result, errors.New("Invalid data length")
+					//dataContent = eof_code[i:len(eof_code)]
+				} else {
+					dataContent = eof_code[i : i+int(dataLength)*2]
+				}
 			}
 			result.Data = dataContent
 			i += int(dataLength) * 2

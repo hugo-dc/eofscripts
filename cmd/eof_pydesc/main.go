@@ -10,7 +10,7 @@ import (
 
 func main() {
 	eof_code := ""
-	is_initcode := false
+	//is_initcode := false
 	if len(os.Args) < 2 {
 		fmt.Scanln(&eof_code)
 	} else {
@@ -22,7 +22,7 @@ func main() {
 			return
 		}
 		if arg1 == "--initcode" {
-			is_initcode = true
+			//is_initcode = true
 			eof_code = stdin_input
 		} else {
 			eof_code = strings.Join(os.Args[1:], " ")
@@ -38,9 +38,9 @@ func main() {
 		fmt.Println("Error: ", err)
 		return
 	}
-	eofObject.Initcode = is_initcode
+	//eofObject.Initcode = is_initcode
 
-	description = common.DescribeAsPython()
+	description := eofObject.DescribeAsPython()
 	fmt.Println(description)
 
 	/*
