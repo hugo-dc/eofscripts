@@ -37,6 +37,21 @@ func (op OpCall) ToBytecode() (string, error) {
 	return bytecode, nil
 }
 
+func (op OpCall) EqualTo(op2 OpCall) bool {
+	if op.OpCode != op2.OpCode {
+		return false
+	}
+	if len(op.Immediates) != len(op2.Immediates) {
+		return false
+	}
+	for i, imm := range op.Immediates {
+		if imm != op2.Immediates[i] {
+			return false
+		}
+	}
+	return true
+}
+
 type EOFObjectModifier struct {
 	Magic       bool
 	Version     bool
@@ -49,7 +64,7 @@ type EOFObjectModifier struct {
 	DataSection bool
 }
 
-func DescribeBytecode(bytecode string) ([]OpCall, error) {
+func BytecodeToOpCalls(bytecode string) ([]OpCall, error) {
 	result := make([]OpCall, 0)
 	opcodes := GetOpcodesByNumber()
 

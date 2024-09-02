@@ -14,6 +14,7 @@ type EOFObject struct {
 	CodeSections      []string
 	Data              string
 	ContainerSections []string
+	InitCode          bool
 }
 
 const (
@@ -26,10 +27,12 @@ const (
 
 func NewEOFObject() EOFObject {
 	return EOFObject{
-		Version:      int64(1),
-		CodeSections: make([]string, 0),
-		Types:        make([][]int64, 0),
-		Data:         "",
+		Version:           int64(1),
+		CodeSections:      make([]string, 0),
+		Types:             make([][]int64, 0),
+		ContainerSections: make([]string, 0),
+		Data:              "",
+		InitCode:          false,
 	}
 }
 
@@ -137,6 +140,116 @@ func (eof *EOFObject) AddDefaultType() bool {
 	} else {
 		return false
 	}
+}
+
+func RawBytecodeToPythonFormat(code string) (string, error) {
+	ops, err := BytecodeToOpCalls(code)
+	if err != nil {
+		return "", err
+	}
+
+	prev_op := OpCall{}
+	op_count := 1
+	descriptions := []string{}
+	code_desc := ""
+	for _, opc := range ops {
+		if opc.EqualTo(prev_op) {
+			op_count++
+			continue
+		}
+		asm := Evm2PyAsm([]OpCall{opc})
+		if op_count > 1 {
+			code_desc += fmt.Sprintf("* %v ", op_count)
+			descriptions = append(descriptions, code_desc)
+			code_desc = fmt.Sprintf("%v", asm)
+			op_count = 1
+		} else {
+			if code_desc != "" {
+				descriptions = append(descriptions, code_desc)
+			}
+			code_desc = fmt.Sprintf("%v", asm)
+		}
+		prev_op = opc
+	}
+	if op_count > 1 {
+		code_desc += fmt.Sprintf("* %v ", op_count)
+		code_desc = ""
+	}
+	/*
+		if code_desc != "" {
+			descriptions = append(descriptions, code_desc)
+		}
+	*/
+	descriptions = append(descriptions, code_desc)
+	return strings.Join(descriptions, "+ "), nil
+}
+
+func (eof *EOFObject) DescribeAsPython() string {
+	pyeof_code := `Container(
+  name = 'EOFV0001',
+  sections = [
+    %s%s%s  ],
+  kind=ContainerKind.%s
+)
+`
+	code_sections := ""
+	for i, v := range eof.CodeSections {
+		// Get Max Stack Height
+		max_stack_height := eof.Types[i][2]
+		code := ""
+		code_description, err := RawBytecodeToPythonFormat(v)
+		if err != nil {
+			code = v + "\n"
+		} else {
+			code = code_description
+		}
+		code_sections += fmt.Sprintf("  Section.Code(code=%s, max_stack_height=%v),\n    ", code, max_stack_height)
+	}
+
+	container_sections := ""
+	if len(eof.ContainerSections) > 0 {
+		for i, v := range eof.ContainerSections {
+			raw_bytecode := ""
+			for i := 0; i < len(v); i += 2 {
+				separator := ", "
+				if i == len(v)-2 {
+					separator = ""
+				}
+				raw_bytecode += fmt.Sprintf("0x%s%s", v[i:i+2], separator)
+			}
+
+			formatted_subcontainer, error := ParseEOF(v)
+			if error != nil {
+				fmt.Println(">> Error: ", error)
+				container_sections += fmt.Sprintf(`  Section.Container(
+          container=Container(
+              name="EOFV1_SUBCONTAINER_%v",
+              raw_bytes=bytes(
+                  [ %s ])
+          )
+      ),
+    `, i+0, raw_bytecode)
+			} else {
+				subcontainer := formatted_subcontainer.DescribeAsPython()
+				container_sections += fmt.Sprintf(`  Section.Container(
+				  %s
+			),
+		`, subcontainer)
+			}
+		}
+	}
+
+	data_section := ""
+	if len(eof.Data) > 0 {
+		data_section += fmt.Sprintf("  Section.Data(data=\"%s\")\n", eof.Data)
+	}
+
+	container_kind := "RUNTIME"
+	if eof.InitCode {
+		container_kind = "INITCODE"
+	}
+
+	return fmt.Sprintf(pyeof_code, code_sections, container_sections, data_section, container_kind)
 }
 
 func calculateMaxStackAndNRF(funcId int, code string, types [][]int64) (int64, bool) {

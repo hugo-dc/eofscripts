@@ -24,7 +24,7 @@ func main() {
 		bytecode = bytecode[2:]
 	}
 
-	opcalls, err := common.DescribeBytecode(bytecode)
+	opcalls, err := common.BytecodeToOpCalls(bytecode)
 	if err != nil {
 		fmt.Println("Error: ", err)
 	} else {
