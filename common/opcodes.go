@@ -101,7 +101,6 @@ var opcodes = []OpCode{
 	{Name: "PC", Code: 0x58, Immediates: 0, StackInput: 0, StackOutput: 1, IsTerminating: false},
 	{Name: "MSIZE", Code: 0x59, Immediates: 0, StackInput: 0, StackOutput: 1, IsTerminating: false},
 	{Name: "GAS", Code: 0x5a, Immediates: 0, StackInput: 0, StackOutput: 1, IsTerminating: false},
-	{Name: "JUMPDEST", Code: 0x5b, Immediates: 0, StackInput: 0, StackOutput: 0, IsTerminating: false},
 	{Name: "NOP", Code: 0x5b, Immediates: 0, StackInput: 0, StackOutput: 0, IsTerminating: false},
 	{Name: "TLOAD", Code: 0x5c, Immediates: 0, StackInput: 1, StackOutput: 1, IsTerminating: false},
 	{Name: "TSTORE", Code: 0x5d, Immediates: 0, StackInput: 2, StackOutput: 0, IsTerminating: false},
