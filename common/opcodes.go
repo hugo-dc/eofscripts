@@ -104,6 +104,7 @@ var opcodes = []OpCode{
 	{Name: "JUMPDEST", Code: 0x5b, Immediates: 0, StackInput: 0, StackOutput: 0, IsTerminating: false},
 	{Name: "NOP", Code: 0x5b, Immediates: 0, StackInput: 0, StackOutput: 0, IsTerminating: false},
 	{Name: "TLOAD", Code: 0x5c, Immediates: 0, StackInput: 1, StackOutput: 1, IsTerminating: false},
+	{Name: "TSTORE", Code: 0x5d, Immediates: 0, StackInput: 2, StackOutput: 0, IsTerminating: false},
 	{Name: "MCOPY", Code: 0x5e, Immediates: 0, StackInput: 3, StackOutput: 0, IsTerminating: false},
 	{Name: "PUSH0", Code: 0x5f, Immediates: 0, StackInput: 0, StackOutput: 1, IsTerminating: false},
 	{Name: "PUSH1", Code: 0x60, Immediates: 1, StackInput: 0, StackOutput: 1, IsTerminating: false},
