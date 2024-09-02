@@ -142,6 +142,10 @@ func (eof *EOFObject) AddDefaultType() bool {
 	}
 }
 
+func (eof *EOFObject) SetInitcode(initcode bool) {
+	eof.InitCode = initcode
+}
+
 func RawBytecodeToSimpleFormat(code string) (string, error) {
 	ops, err := BytecodeToOpCalls(code)
 	code_desc := ""
@@ -337,7 +341,6 @@ func (eof *EOFObject) DescribeAsPython() string {
 
 			formatted_subcontainer, error := ParseEOF(v)
 			if error != nil {
-				fmt.Println(">> Error: ", error)
 				container_sections += fmt.Sprintf(`  Section.Container(
           container=Container(
               name="EOFV1_SUBCONTAINER_%v",
@@ -528,7 +531,6 @@ func ParseEOF(eof_code string) (EOFObject, error) {
 	version := int64(0)
 	versionHex := ""
 	eof_code = strings.ToLower(eof_code)
-	fmt.Println("EOF code: ", eof_code)
 
 	typesLength := int64(0)
 	types := [][]int64{}
@@ -678,17 +680,11 @@ func ParseEOF(eof_code string) (EOFObject, error) {
 			}
 
 			// Extract data
-			if int(dataLength)*2 > len(eof_code) {
+			if i+int(dataLength)*2 > len(eof_code) {
 				//dataContent = eof_code[i : len(eof_code)/2-i]
 				return result, errors.New("Invalid data length")
 			} else {
-				fmt.Println("Data length: ", dataLength)
-				if i+int(dataLength)*2 > len(eof_code) {
-					return result, errors.New("Invalid data length")
-					//dataContent = eof_code[i:len(eof_code)]
-				} else {
-					dataContent = eof_code[i : i+int(dataLength)*2]
-				}
+				dataContent = eof_code[i : i+int(dataLength)*2]
 			}
 			result.Data = dataContent
 			i += int(dataLength) * 2
