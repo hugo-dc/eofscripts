@@ -83,7 +83,7 @@ var opcodes = []OpCode{
 	{Name: "COINBASE", Code: 0x41, Immediates: 0, StackInput: 0, StackOutput: 1, IsTerminating: false},
 	{Name: "TIMESTAMP", Code: 0x42, Immediates: 0, StackInput: 0, StackOutput: 1, IsTerminating: false},
 	{Name: "NUMBER", Code: 0x43, Immediates: 0, StackInput: 0, StackOutput: 1, IsTerminating: false},
-	{Name: "DIFFICULTY", Code: 0x44, Immediates: 0, StackInput: 0, StackOutput: 1, IsTerminating: false},
+	{Name: "PREVRANDAO", Code: 0x44, Immediates: 0, StackInput: 0, StackOutput: 1, IsTerminating: false},
 	{Name: "GASLIMIT", Code: 0x45, Immediates: 0, StackInput: 0, StackOutput: 1, IsTerminating: false},
 	{Name: "CHAINID", Code: 0x46, Immediates: 0, StackInput: 0, StackOutput: 1, IsTerminating: false},
 	{Name: "SELFBALANCE", Code: 0x47, Immediates: 0, StackInput: 0, StackOutput: 1, IsTerminating: false},
