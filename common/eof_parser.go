@@ -325,8 +325,8 @@ func (eof *EOFObject) DescribeAsPython() string {
 			code = code_description
 		}
 		extra_args := ""
-		if eof.Types[i][0] == 0 {
-			extra_args = fmt.Sprintf("code_inputes=%v, ", eof.Types[i][0])
+		if eof.Types[i][0] != 0 {
+			extra_args = fmt.Sprintf("code_inputs=%v, ", eof.Types[i][0])
 		}
 		if eof.Types[i][1] != 0x80 {
 			extra_args += fmt.Sprintf("code_outputs=%v, ", eof.Types[i][1])
