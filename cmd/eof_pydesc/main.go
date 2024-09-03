@@ -43,6 +43,6 @@ func main() {
 	}
 	//eofObject.Initcode = is_initcode
 
-	description := eofObject.DescribeAsPython()
+	description := eofObject.DescribeAsPython(0, 0)
 	fmt.Println(description)
 }

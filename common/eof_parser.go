@@ -293,12 +293,16 @@ func (eof *EOFObject) Describe() string {
 	return eof_desc
 }
 
-func (eof *EOFObject) DescribeAsPython() string {
+func (eof *EOFObject) DescribeAsPython(depth uint16, index uint16) string {
 	pyeof_code := ""
+	str_depth := ""
+	if depth != 0 {
+		str_depth = fmt.Sprintf("_D%vI%v", depth, index)
+	}
 
 	if len(eof.ContainerSections) == 0 {
 		pyeof_code = `Container(
-  name = 'EOFV0001',
+  name = 'EOFV1_0000%s',
   sections = [
     %s%s%s  ],
   kind=ContainerKind.%s
@@ -306,7 +310,7 @@ func (eof *EOFObject) DescribeAsPython() string {
 `
 	} else {
 		pyeof_code = `Container(
-  name = 'EOFV0001',
+  name = 'EOFV1_0000%s',
   sections = [
     %s%s%s  
   ],
@@ -358,7 +362,7 @@ func (eof *EOFObject) DescribeAsPython() string {
       ),
     `, i+0, raw_bytecode)
 			} else {
-				subcontainer := formatted_subcontainer.DescribeAsPython()
+				subcontainer := formatted_subcontainer.DescribeAsPython(depth+1, uint16(i))
 				subcontainer = strings.Replace(subcontainer, "\n", "\n        ", -1)
 				container_sections += fmt.Sprintf(`  Section.Container(container=%s
       ),`, subcontainer)
@@ -376,7 +380,7 @@ func (eof *EOFObject) DescribeAsPython() string {
 		container_kind = "INITCODE"
 	}
 
-	return fmt.Sprintf(pyeof_code, code_sections, container_sections, data_section, container_kind)
+	return fmt.Sprintf(pyeof_code, str_depth, code_sections, container_sections, data_section, container_kind)
 }
 
 func calculateMaxStackAndNRF(funcId int, code string, types [][]int64) (int64, bool) {
