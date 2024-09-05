@@ -197,13 +197,8 @@ func RawBytecodeToPythonFormat(code string) (string, error) {
 	}
 	if op_count > 1 {
 		code_desc += fmt.Sprintf("* %v ", op_count)
-		code_desc = ""
 	}
-	/*
-		if code_desc != "" {
-			descriptions = append(descriptions, code_desc)
-		}
-	*/
+
 	descriptions = append(descriptions, code_desc)
 	return strings.Join(descriptions, "+ "), nil
 }
