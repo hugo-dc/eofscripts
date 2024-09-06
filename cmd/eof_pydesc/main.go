@@ -11,13 +11,14 @@ import (
 func main() {
 	eof_code := ""
 	is_initcode := false
+	explicit_runtime := false
 	if len(os.Args) < 2 {
 		fmt.Scanln(&eof_code)
 	} else {
 		stdin_input := ""
 		fmt.Scanln(&stdin_input)
 		arg1 := os.Args[1]
-		if len(stdin_input) > 1 && arg1 != "--initcode" {
+		if len(stdin_input) > 1 && arg1 != "--initcode" && arg1 != "--runtime" {
 			fmt.Println("Error: No arguments allowed when reading from stdin")
 			return
 		}
@@ -25,7 +26,12 @@ func main() {
 			is_initcode = true
 			eof_code = stdin_input
 		} else {
-			eof_code = strings.Join(os.Args[1:], " ")
+			if arg1 == "--runtime" {
+				explicit_runtime = true
+				eof_code = stdin_input
+			} else {
+				eof_code = strings.Join(os.Args[1:], " ")
+			}
 		}
 	}
 	if eof_code[:2] == "0x" {
@@ -41,7 +47,9 @@ func main() {
 	if is_initcode {
 		eofObject.SetInitcode(is_initcode)
 	}
-	//eofObject.Initcode = is_initcode
+	if explicit_runtime {
+		eofObject.SetExplicitRuntime(explicit_runtime)
+	}
 
 	description := eofObject.DescribeAsPython(0, 0)
 	fmt.Println(description)

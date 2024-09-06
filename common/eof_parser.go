@@ -15,6 +15,7 @@ type EOFObject struct {
 	Data              string
 	ContainerSections []string
 	InitCode          bool
+	ExplicitRuntime   bool
 }
 
 const (
@@ -33,6 +34,7 @@ func NewEOFObject() EOFObject {
 		ContainerSections: make([]string, 0),
 		Data:              "",
 		InitCode:          false,
+		ExplicitRuntime:   false,
 	}
 }
 
@@ -146,6 +148,10 @@ func (eof *EOFObject) SetInitcode(initcode bool) {
 	eof.InitCode = initcode
 }
 
+func (eof *EOFObject) SetExplicitRuntime(explicitRuntime bool) {
+	eof.ExplicitRuntime = explicitRuntime
+}
+
 func RawBytecodeToSimpleFormat(code string) (string, error) {
 	ops, err := BytecodeToOpCalls(code)
 	code_desc := ""
@@ -198,7 +204,7 @@ func RawBytecodeToPythonFormat(code string) (string, error) {
 	if op_count > 1 {
 		code_desc += fmt.Sprintf("* %v ", op_count)
 	}
-
+	code_desc = strings.TrimRight(code_desc, " ")
 	descriptions = append(descriptions, code_desc)
 	return strings.Join(descriptions, "+ "), nil
 }
@@ -299,8 +305,7 @@ func (eof *EOFObject) DescribeAsPython(depth uint16, index uint16) string {
 		pyeof_code = `Container(
   name = 'EOFV1_0000%s',
   sections = [
-    %s%s%s  ],
-  kind=ContainerKind.%s
+    %s%s%s  ],%s
 )
 `
 	} else {
@@ -308,8 +313,7 @@ func (eof *EOFObject) DescribeAsPython(depth uint16, index uint16) string {
   name = 'EOFV1_0000%s',
   sections = [
     %s%s%s  
-  ],
-  kind=ContainerKind.%s
+  ],%s
 )`
 	}
 	code_sections := ""
@@ -325,13 +329,13 @@ func (eof *EOFObject) DescribeAsPython(depth uint16, index uint16) string {
 		}
 		extra_args := ""
 		if eof.Types[i][0] != 0 {
-			extra_args = fmt.Sprintf("code_inputs=%v, ", eof.Types[i][0])
+			extra_args = fmt.Sprintf(" code_inputs=%v,", eof.Types[i][0])
 		}
 		if eof.Types[i][1] != 0x80 {
-			extra_args += fmt.Sprintf("code_outputs=%v, ", eof.Types[i][1])
+			extra_args += fmt.Sprintf(" code_outputs=%v,", eof.Types[i][1])
 		}
 
-		code_sections += fmt.Sprintf("  Section.Code(code=%s,%smax_stack_height=%v),\n    ", code, extra_args, max_stack_height)
+		code_sections += fmt.Sprintf("  Section.Code(code=%s,%s max_stack_height=%v),\n    ", code, extra_args, max_stack_height)
 	}
 
 	container_sections := ""
@@ -370,9 +374,12 @@ func (eof *EOFObject) DescribeAsPython(depth uint16, index uint16) string {
 		data_section += fmt.Sprintf("  Section.Data(data=\"%s\")\n", eof.Data)
 	}
 
-	container_kind := "RUNTIME"
+	container_kind := ""
+	if eof.ExplicitRuntime {
+		container_kind = "\n  kind=ContainerKind.RUNTIME\n"
+	}
 	if eof.InitCode {
-		container_kind = "INITCODE"
+		container_kind = "\n  kind=ContainerKind.INITCODE\n"
 	}
 
 	return fmt.Sprintf(pyeof_code, str_depth, code_sections, container_sections, data_section, container_kind)
