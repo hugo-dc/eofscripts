@@ -306,8 +306,7 @@ func (eof *EOFObject) DescribeAsPython(depth uint16, index uint16) string {
   name = 'EOFV1_0000%s',
   sections = [
     %s%s%s  ],%s
-)
-`
+)`
 	} else {
 		pyeof_code = `Container(
   name = 'EOFV1_0000%s',
@@ -352,14 +351,15 @@ func (eof *EOFObject) DescribeAsPython(depth uint16, index uint16) string {
 
 			formatted_subcontainer, error := ParseEOF(v)
 			if error != nil {
+				subcontainerId := fmt.Sprintf("_D%vI%v", depth+1, i)
 				container_sections += fmt.Sprintf(`  Section.Container(
           container=Container(
-              name="EOFV1_SUBCONTAINER_%v",
+              name="EOFV1_0000%s",
               raw_bytes=bytes(
                   [ %s ])
           )
       ),
-    `, i+0, raw_bytecode)
+    `, subcontainerId, raw_bytecode)
 			} else {
 				subcontainer := formatted_subcontainer.DescribeAsPython(depth+1, uint16(i))
 				subcontainer = strings.Replace(subcontainer, "\n", "\n        ", -1)
@@ -376,10 +376,10 @@ func (eof *EOFObject) DescribeAsPython(depth uint16, index uint16) string {
 
 	container_kind := ""
 	if eof.ExplicitRuntime {
-		container_kind = "\n  kind=ContainerKind.RUNTIME\n"
+		container_kind = "\n  kind=ContainerKind.RUNTIME"
 	}
 	if eof.InitCode {
-		container_kind = "\n  kind=ContainerKind.INITCODE\n"
+		container_kind = "\n  kind=ContainerKind.INITCODE"
 	}
 
 	return fmt.Sprintf(pyeof_code, str_depth, code_sections, container_sections, data_section, container_kind)

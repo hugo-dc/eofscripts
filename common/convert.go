@@ -64,6 +64,39 @@ type EOFObjectModifier struct {
 	DataSection bool
 }
 
+func DescribeBytecode(bytecode string) string {
+	result := ""
+	opcodes := GetOpcodesByNumber()
+
+	for i := 0; i < len(bytecode); i += 2 {
+		code_str := bytecode[i:(i + 2)]
+		code, err := strconv.ParseInt(code_str, 16, 64)
+
+		if err != nil {
+			result += code_str + "# Unknown opcode"
+		}
+
+		if op, ok := opcodes[int(code)]; ok {
+			imm := bytecode[i+2 : i+2+(op.Immediates*2)]
+			if op.Name == "" {
+				result += code_str + "# Unknown opcode"
+			} else {
+				if op.Immediates > 0 {
+					result += code_str + imm + " # " + op.Name + "\n"
+				} else {
+					result += code_str + " # " + op.Name + "\n"
+				}
+			}
+
+			i += op.Immediates * 2
+		} else {
+			uopName := fmt.Sprintf("OPCODE_%02X", code)
+			result += uopName + " "
+		}
+	}
+	return result
+}
+
 func BytecodeToOpCalls(bytecode string) ([]OpCall, error) {
 	result := make([]OpCall, 0)
 	opcodes := GetOpcodesByNumber()
@@ -115,7 +148,10 @@ func BytecodeToOpCalls(bytecode string) ([]OpCall, error) {
 
 			i += op.Immediates * 2
 		} else {
-			return nil, errors.New(fmt.Sprintf("Opcode not found: %s", code_str))
+			uopName := fmt.Sprintf("OPCODE_%02X", code)
+			undefinedOp := OpCode{Code: int(code), Name: uopName, Immediates: 0, StackInput: 0, StackOutput: 0, IsTerminating: false}
+			opCall := OpCall{Position: i / 2, OpCode: undefinedOp, Immediates: make([]Immediate, 0)}
+			result = append(result, opCall)
 		}
 	}
 
