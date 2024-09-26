@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"os"
 	"strings"
@@ -38,7 +39,13 @@ func main() {
 		eof_code = eof_code[2:]
 	}
 	eof_code = strings.Replace(eof_code, " ", "", -1)
-	eofObject, err := common.ParseEOF(eof_code)
+	eofBytecode, err := hex.DecodeString(eof_code)
+	if err != nil {
+		fmt.Println("Error: ", err)
+		return
+	}
+
+	eofObject, err := common.ParseEOF(eofBytecode)
 
 	if err != nil {
 		fmt.Println("Error: ", err)

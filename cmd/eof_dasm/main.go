@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"os"
 	"strconv"
@@ -65,8 +66,14 @@ func main() {
 		DataSection:     true,
 	}
 	modTypeSections := make(map[int]string)
-	eof_code := os.Args[1]
-	eofObject, err := common.ParseEOF(eof_code)
+	eofStr := os.Args[1]
+	eofBytecode, err := hex.DecodeString(eofStr)
+	if err != nil {
+		fmt.Println("Error: ", err)
+		return
+	}
+
+	eofObject, err := common.ParseEOF(eofBytecode)
 
 	if err != nil {
 		fmt.Println("Error:", err)

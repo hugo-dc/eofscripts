@@ -1,6 +1,8 @@
 package common
 
 import (
+	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strconv"
@@ -14,7 +16,8 @@ const (
 
 type Immediate struct {
 	Type      int
-	Immediate string
+	Immediate []byte
+	Label     string
 }
 
 type OpCall struct {
@@ -23,17 +26,32 @@ type OpCall struct {
 	Immediates []Immediate
 }
 
-func (op OpCall) ToBytecode() (string, error) {
-	bytecode := op.OpCode.AsHex()
+func (im Immediate) EqualTo(im2 Immediate) bool {
+	if im.Type != im2.Type {
+		return false
+	}
+	if len(im.Immediate) != len(im2.Immediate) {
+		return false
+	}
+	for i, imm := range im.Immediate {
+		if imm != im2.Immediate[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func (op OpCall) ToBytecode() ([]byte, error) {
+	bytecode := make([]byte, 0)
+	bytecode = append(bytecode, byte(op.Code))
 
 	for _, im := range op.Immediates {
 		if im.Type == Label {
-			return "", errors.New("Not expected label " + im.Immediate)
+			return bytecode, errors.New("Not expected label " + im.Label)
 		}
 
-		bytecode += im.Immediate
+		bytecode = append(bytecode, im.Immediate...)
 	}
-
 	return bytecode, nil
 }
 
@@ -45,7 +63,7 @@ func (op OpCall) EqualTo(op2 OpCall) bool {
 		return false
 	}
 	for i, imm := range op.Immediates {
-		if imm != op2.Immediates[i] {
+		if !imm.EqualTo(op2.Immediates[i]) {
 			return false
 		}
 	}
@@ -97,44 +115,29 @@ func DescribeBytecode(bytecode string) string {
 	return result
 }
 
-func BytecodeToOpCalls(bytecode string) ([]OpCall, error) {
+func BytecodeToOpCalls(bytecode []byte) ([]OpCall, error) {
 	result := make([]OpCall, 0)
 	opcodes := GetOpcodesByNumber()
 
-	for i := 0; i < len(bytecode); i += 2 {
-		code_str := bytecode[i:(i + 2)]
-		code, err := strconv.ParseInt(code_str, 16, 64)
-
-		if err != nil {
-			return nil, err
-		}
-
-		if op, ok := opcodes[int(code)]; ok {
-			opCall := OpCall{Position: i / 2, OpCode: op, Immediates: make([]Immediate, 0)}
+	for i := 0; i < len(bytecode); i++ {
+		code := int(bytecode[i])
+		if op, ok := opcodes[code]; ok {
+			opCall := OpCall{Position: i, OpCode: op, Immediates: make([]Immediate, 0)}
 
 			if op.Name == "" {
 				return nil, errors.New(fmt.Sprintf("Opcode not found: %d", op.Code))
 			}
 
 			if op.Immediates > 0 {
-				immediate := bytecode[i+2 : i+2+(op.Immediates*2)]
-				immediateInt := int64(0)
-				if op.Immediates < 8 {
-					immediateInt_tmp, err := strconv.ParseInt(immediate, 16, 64)
-
-					if err != nil {
-						return nil, err
-					}
-					immediate = fmt.Sprintf("%0*x", op.Immediates*2, immediateInt_tmp)
-					immediateInt = immediateInt_tmp
-				}
+				immediate := bytecode[i+1 : i+1+(op.Immediates)]
 				opCall.Immediates = append(opCall.Immediates, Immediate{Type: Value, Immediate: immediate})
+				immediateInt := int64(binary.BigEndian.Uint16([]byte{immediate[0], 0}))
 
 				// RJUMPV can have many immediates
 				if op.Name == "RJUMPV" {
-					i += 2
+					i += 1
 					for j := 0; j <= int(immediateInt); j++ {
-						if i+6 > len(bytecode) {
+						if i+3 > len(bytecode) {
 							return nil, errors.New(fmt.Sprintf("Truncated RJUMPV at position %d", i))
 						}
 						immediate := bytecode[i+2 : i+6]
@@ -166,19 +169,11 @@ func Evm2Asm(opcalls []OpCall, prefix string, imm_indicators []string) string {
 		result += prefix + op.Name
 
 		if op.OpCode.Immediates == 1 {
-			immInt, err := strconv.ParseInt(op.Immediates[0].Immediate, 16, 64)
-
-			if err != nil {
-				panic(err)
-			}
+			immInt := int(op.Immediates[0].Immediate[0])
 
 			if op.Name == "RJUMPV" {
 				for i := 0; i <= int(immInt); i++ {
-					immInt2, err := strconv.ParseInt(op.Immediates[i+1].Immediate, 16, 64)
-
-					if err != nil {
-						panic(err)
-					}
+					immInt2 := int64(binary.BigEndian.Uint16(op.Immediates[i+1].Immediate))
 
 					if immInt2 > 32767 {
 						immInt2 = ((65535 - immInt2) + 1) * -1
@@ -199,16 +194,11 @@ func Evm2Asm(opcalls []OpCall, prefix string, imm_indicators []string) string {
 			}
 		} else if op.OpCode.Immediates > 1 {
 			immediate := op.Immediates[0].Immediate
-			imm, err := strconv.ParseInt(immediate, 16, 64)
-
-			if err != nil {
-				result = result + par_op + "0x" + immediate + par_cl
-			} else {
-				if imm > 32767 {
-					imm = ((65535 - imm) + 1) * -1
-				}
-				result = result + par_op + strconv.Itoa(int(imm)) + par_cl
+			imm := int64(binary.BigEndian.Uint16(immediate))
+			if imm > 32767 {
+				imm = ((65535 - imm) + 1) * -1
 			}
+			result = result + par_op + strconv.Itoa(int(imm)) + par_cl
 		}
 
 		result += " "
@@ -250,25 +240,34 @@ func opcode2evm(opcode string, immediate string) (OpCall, error) {
 		if op.Name == "RJUMPV" {
 			values := strings.Split(immediate, ",")
 			max_size := len(values) - 1
-			opCall.Immediates = append(opCall.Immediates, Immediate{Type: Value, Immediate: fmt.Sprintf("%02x", max_size)})
-			for _, ro := range values {
+
+			immBytes := make([]byte, len(values)*2+1)
+			immBytes[0] = byte(max_size + 1)
+
+			for i, ro := range values {
+				relativeOffsetBytes := make([]byte, 2)
 				relativeOffset, err := strconv.ParseInt(ro, 10, 64)
 
 				if err != nil {
-					opCall.Immediates = append(opCall.Immediates, Immediate{Type: Label, Immediate: ro})
-				} else {
-
-					if relativeOffset < 0 {
-						relativeOffset = 65535 - (relativeOffset * -1) + 1
-					}
-					opCall.Immediates = append(opCall.Immediates, Immediate{Type: Value, Immediate: fmt.Sprintf("%04x", relativeOffset)})
+					return opCall, err
+					/*
+						fmt.Println("??? err: ", err)
+						return opCall, err
+						if relativeOffset < 0 {
+							relativeOffset = ((65535 - relativeOffset) + 1) * -1
+						}
+					*/
 				}
+				binary.BigEndian.PutUint16(relativeOffsetBytes, uint16(relativeOffset))
+				immBytes[(i*2)+1] = relativeOffsetBytes[0]
+				immBytes[(i*2)+2] = relativeOffsetBytes[1]
 			}
+			opCall.Immediates = append(opCall.Immediates, Immediate{Type: Value, Immediate: immBytes})
 			return opCall, nil
 		}
 
 		// For >push2 a hexadecimal must be received as parameter
-		imm_hex := ""
+		immBytes := []byte{}
 		if op.Code > 0x60 && op.Code <= 0x7f {
 			if immediate[0:2] != "0x" {
 				return opCall, errors.New("hexadecimal value expected")
@@ -283,34 +282,41 @@ func opcode2evm(opcode string, immediate string) (OpCall, error) {
 
 				immediate = "0" + immediate
 			}
-			imm_hex = immediate
-			opCall.Immediates = append(opCall.Immediates, Immediate{Type: Value, Immediate: imm_hex})
+			immBytes, err := hex.DecodeString(immediate)
+			if err != nil {
+				return opCall, err
+			}
+			opCall.Immediates = append(opCall.Immediates, Immediate{Type: Value, Immediate: immBytes})
 		} else {
 			imm, err := strconv.ParseInt(immediate, 10, 64)
 			if err != nil {
-				opCall.Immediates = append(opCall.Immediates, Immediate{Type: Label, Immediate: immediate})
+				fmt.Println("??? err: ", err)
+				immBytes, err = hex.DecodeString(immediate)
+				if err != nil {
+					return opCall, err
+				}
+				fmt.Println("??? opcode: ", op.Name)
+				fmt.Println("??? immBytes: ", immBytes)
+				opCall.Immediates = append(opCall.Immediates, Immediate{Type: Value, Immediate: immBytes})
 			} else {
 				if imm < 0 {
 					if op.Name != "RJUMP" && op.Name != "RJUMPI" {
 						return opCall, errors.New("Negative immediate only possible for RJUMP and RJUMPI")
 					}
 
-					imm_hex = strconv.FormatUint(uint64(imm), 16)
-					imm_hex = imm_hex[len(imm_hex)-op.Immediates*2:]
-					opCall.Immediates = append(opCall.Immediates, Immediate{Type: Value, Immediate: imm_hex})
+					immBytes := make([]byte, 2)
+					binary.BigEndian.PutUint16(immBytes, uint16(imm))
+					opCall.Immediates = append(opCall.Immediates, Immediate{Type: Value, Immediate: immBytes})
 				} else {
-					imm_hex = strconv.FormatInt(imm, 16)
-					if len(imm_hex)%2 != 0 {
-						imm_hex = "0" + imm_hex
+					immInt := byte(imm)
+					immBytes := make([]byte, op.Immediates)
+
+					if op.Immediates == 2 {
+						immInt = byte(imm >> 8)
+						immBytes[1] = immInt
 					}
-					for {
-						if len(imm_hex) < op.Immediates*2 {
-							imm_hex = "00" + imm_hex
-						} else {
-							break
-						}
-					}
-					opCall.Immediates = append(opCall.Immediates, Immediate{Type: Value, Immediate: imm_hex})
+					immBytes[0] = immInt
+					opCall.Immediates = append(opCall.Immediates, Immediate{Type: Value, Immediate: immBytes})
 				}
 			}
 		}
@@ -393,7 +399,7 @@ func Mnem2Evm(mn string) (string, error) {
 
 		for _, im := range op.Immediates {
 			if im.Type == Label {
-				if p, ok := labels[im.Immediate]; ok {
+				if p, ok := labels[im.Label]; ok {
 					if op.OpCode.Name == "RJUMP" || op.OpCode.Name == "RJUMPI" || op.OpCode.Name == "RJUMPV" {
 						//fmt.Println("pos:", pos)
 						//fmt.Println("p:", p)
@@ -417,7 +423,7 @@ func Mnem2Evm(mn string) (string, error) {
 					fmt.Println("labels: ", labels)
 				}
 			} else {
-				result += im.Immediate
+				result += hex.EncodeToString(im.Immediate)
 			}
 		}
 	}
@@ -438,54 +444,58 @@ func NewEOFObjectModifier() EOFObjectModifier {
 	}
 }
 
-func ModifyEOFObject(eofObject EOFObject, modifier EOFObjectModifier) string {
-	newcode := ""
+func ModifyEOFObject(eofObject EOFObject, modifier EOFObjectModifier) []byte {
+	newcode := make([]byte, 0)
 	if modifier.Magic {
-		newcode += "ef00"
+		newcode = append(newcode, 0xef)
+		newcode = append(newcode, 0x00)
 	}
 	if modifier.Version {
-		newcode += fmt.Sprintf("%02x", eofObject.Version)
+		newcode = append(newcode, byte(eofObject.Version))
 	}
 	if modifier.TypeHeader {
-		newcode += fmt.Sprintf("01%04x", len(eofObject.Types)*4)
+		newcode = append(newcode, 0x01)
 	}
 	if modifier.CodeHeader {
-		newcode += fmt.Sprintf("02%04x", len(eofObject.CodeSections))
+		newcode = append(newcode, 0x02)
+		newcode = append(newcode, byte(len(eofObject.CodeSections)))
 
 		for _, cs := range eofObject.CodeSections {
-			newcode += fmt.Sprintf("%04x", len(cs)/2)
+			newcode = append(newcode, byte(len(cs)))
 		}
 	}
 	if modifier.DataHeader {
-		newcode += fmt.Sprintf("03%04x", len(eofObject.Data)/2)
+		newcode = append(newcode, 0x03)
+		newcode = append(newcode, byte(len(eofObject.Data)))
 	}
 	if modifier.Terminator {
-		newcode += "00"
+		newcode = append(newcode, 0x00)
 	}
 
-	for i, t := range eofObject.Types {
+	for i, _ := range eofObject.Types {
 		if s, ok := modifier.TypeSection[i]; ok {
 			// If it is blank, means has to be removed
 			if s != "" {
-				newcode += s
+				types := []byte(s)
+				newcode = append(newcode, types...)
 			}
-		} else {
-			newcode += fmt.Sprintf("%02x%02x%02x", t[0], t[1], t[2])
+			//} else { // TODO
+			//newcode = append(newcode, t...)
 		}
 	}
 
 	for i, cs := range eofObject.CodeSections {
 		if remain, ok := modifier.CodeSection[i]; ok {
 			if remain {
-				newcode += cs
+				newcode = append(newcode, cs...)
 			}
 		} else {
-			newcode += cs
+			newcode = append(newcode, cs...)
 		}
 	}
 
 	if modifier.DataSection {
-		newcode += eofObject.Data
+		newcode = append(newcode, eofObject.Data...)
 	}
 	return newcode
 }

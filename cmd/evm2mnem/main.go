@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"os"
 
@@ -19,9 +20,15 @@ func main() {
 		return
 	}
 
-	bytecode := os.Args[1]
-	if bytecode[:2] == "0x" {
-		bytecode = bytecode[2:]
+	bytecodeStr := os.Args[1]
+	if bytecodeStr[:2] == "0x" {
+		bytecodeStr = bytecodeStr[2:]
+	}
+
+	bytecode, err := hex.DecodeString(bytecodeStr)
+	if err != nil {
+		fmt.Println("Error: ", err)
+		return
 	}
 
 	opcalls, err := common.BytecodeToOpCalls(bytecode)

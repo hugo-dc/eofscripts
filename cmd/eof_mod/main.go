@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"os"
 	"strconv"
@@ -21,7 +22,13 @@ func main() {
 	}
 
 	eofCode := os.Args[1]
-	eofObject, err := common.ParseEOF(eofCode)
+	eofBytecode, err := hex.DecodeString(eofCode)
+	if err != nil {
+		fmt.Println("Error: ", err)
+		return
+	}
+
+	eofObject, err := common.ParseEOF(eofBytecode)
 
 	if err != nil {
 		fmt.Println("Err:", err)
@@ -29,13 +36,25 @@ func main() {
 
 	for i := 2; i < len(os.Args); i++ {
 		if os.Args[i][:2] == "d:" {
-			if eofObject.Data != "" {
+			if len(eofObject.Data) != 0 {
 				fmt.Println("Warning: EOF Object alredy contains data, data will be overwritten")
 			}
-			eofObject.AddData(os.Args[i][2:])
+			dataStr := os.Args[i][2:]
+			data, err := hex.DecodeString(dataStr)
+			if err != nil {
+				fmt.Println("Error: ", err)
+				return
+			}
+			eofObject.AddData(data)
 		}
 		if os.Args[i][:2] == "c:" {
-			eofObject.AddCode(os.Args[i][2:])
+			codeStr := os.Args[i][2:]
+			code, err := hex.DecodeString(codeStr)
+			if err != nil {
+				fmt.Println("Error: ", err)
+				return
+			}
+			eofObject.AddCode(code)
 		}
 		if os.Args[i][:2] == "C:" {
 		}

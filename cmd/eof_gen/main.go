@@ -31,7 +31,12 @@ func main() {
 				fmt.Println("Error: ", err)
 				return
 			}
-			eofObject.AddCode(code)
+			bytecode, err := hex.DecodeString(code)
+			if err != nil {
+				fmt.Println("Error: ", err)
+				return
+			}
+			eofObject.AddCode(bytecode)
 		}
 
 		if arg[:2] == "C:" {
@@ -57,27 +62,32 @@ func main() {
 
 				code_type := []int64{inputs, outputs}
 				code := code_contents[3]
-				_, err = hex.DecodeString(code)
+				bytecode, err := hex.DecodeString(code)
 				if err != nil {
 					fmt.Println("Error: ", err)
 					return
 				}
-				eofObject.AddCodeWithType(code, code_type)
+				eofObject.AddCodeWithType(bytecode, code_type)
 			}
 		}
 		if arg[:2] == "K:" {
 			container := arg[2:]
-			_, err := hex.DecodeString(container)
+			containerBytecode, err := hex.DecodeString(container)
 			if err != nil {
 				fmt.Println("Error: ", err)
 				return
 			}
-			eofObject.AddContainer(container)
+			eofObject.AddContainer(containerBytecode)
 		}
 
 	}
 
-	eofObject.AddData(data)
+	dataBytes, err := hex.DecodeString(data)
+	if err != nil {
+		fmt.Println("Error: ", err)
+		return
+	}
+	eofObject.AddData(dataBytes)
 	eof_code := eofObject.Code()
 	fmt.Println(eof_code)
 }

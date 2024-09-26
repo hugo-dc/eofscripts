@@ -1,19 +1,20 @@
 package common
 
 import (
+	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math"
-	"strconv"
 	"strings"
 )
 
 type EOFObject struct {
 	Version           int64
 	Types             [][]int64
-	CodeSections      []string
-	Data              string
-	ContainerSections []string
+	CodeSections      [][]byte
+	Data              []byte
+	ContainerSections [][]byte
 	InitCode          bool
 	ExplicitRuntime   bool
 }
@@ -29,13 +30,53 @@ const (
 func NewEOFObject() EOFObject {
 	return EOFObject{
 		Version:           int64(1),
-		CodeSections:      make([]string, 0),
+		CodeSections:      make([][]byte, 0),
 		Types:             make([][]int64, 0),
-		ContainerSections: make([]string, 0),
-		Data:              "",
+		ContainerSections: make([][]byte, 0),
+		Data:              make([]byte, 0),
 		InitCode:          false,
 		ExplicitRuntime:   false,
 	}
+}
+
+func (eof *EOFObject) EqualTo(other EOFObject) bool {
+	if eof.Version != other.Version {
+		return false
+	}
+	if len(eof.Types) != len(other.Types) {
+		return false
+	}
+	for i, t := range eof.Types {
+		if t[0] != other.Types[i][0] || t[1] != other.Types[i][1] || t[2] != other.Types[i][2] {
+			return false
+		}
+	}
+	if len(eof.CodeSections) != len(other.CodeSections) {
+		return false
+	}
+	for i, c := range eof.CodeSections {
+		if string(c) != string(other.CodeSections[i]) {
+			return false
+		}
+	}
+	if len(eof.ContainerSections) != len(other.ContainerSections) {
+		return false
+	}
+	for i, c := range eof.ContainerSections {
+		if string(c) != string(other.ContainerSections[i]) {
+			return false
+		}
+	}
+	if string(eof.Data) != string(other.Data) {
+		return false
+	}
+	if eof.InitCode != other.InitCode {
+		return false
+	}
+	if eof.ExplicitRuntime != other.ExplicitRuntime {
+		return false
+	}
+	return true
 }
 
 func (eof *EOFObject) Code() string {
@@ -58,7 +99,7 @@ func (eof *EOFObject) Code() string {
 	codeLengths := ""
 	numCodeSections := 0
 	for _, c := range eof.CodeSections {
-		codeLengthHex := fmt.Sprintf("%04x", len(c)/2)
+		codeLengthHex := fmt.Sprintf("%04x", len(c))
 		codeLengths = codeLengths + codeLengthHex
 		numCodeSections += 1
 	}
@@ -70,10 +111,10 @@ func (eof *EOFObject) Code() string {
 	numContainers := 0
 	containerContents := ""
 	for _, c := range eof.ContainerSections {
-		containersLengthHex := fmt.Sprintf("%04x", len(c)/2)
+		containersLengthHex := fmt.Sprintf("%04x", len(c))
 		containersLength = containersLength + containersLengthHex
 		numContainers += 1
-		containerContents = containerContents + c
+		containerContents = containerContents + hex.EncodeToString(c)
 	}
 	if numContainers > 0 {
 		numContainersHex := fmt.Sprintf("%04x", numContainers)
@@ -81,7 +122,7 @@ func (eof *EOFObject) Code() string {
 	}
 
 	dataHeader := ""
-	dataLengthHex := fmt.Sprintf("%04x", len(eof.Data)/2)
+	dataLengthHex := fmt.Sprintf("%04x", len(eof.Data))
 	dataHeader = dataHeader + dataId + dataLengthHex
 
 	terminator := "00"
@@ -103,22 +144,22 @@ func (eof *EOFObject) Code() string {
 
 	codeContents := ""
 	for _, c := range eof.CodeSections {
-		codeContents = codeContents + c
+		codeContents = codeContents + hex.EncodeToString(c)
 	}
 
-	eof_code = eof_code + versionHex + typesHeader + codeHeaders + containerHeader + dataHeader + terminator + typeContents + codeContents + containerContents + eof.Data
+	eof_code = eof_code + versionHex + typesHeader + codeHeaders + containerHeader + dataHeader + terminator + typeContents + codeContents + containerContents + hex.EncodeToString(eof.Data)
 	return eof_code
 }
 
-func (eof *EOFObject) AddData(dt string) {
+func (eof *EOFObject) AddData(dt []byte) {
 	eof.Data = dt
 }
 
-func (eof *EOFObject) AddCode(code string) {
-	eof.AddCodeWithType(code, []int64{0, 0})
+func (eof *EOFObject) AddCode(code []byte) {
+	eof.AddCodeWithType(code, []int64{0, 0x80, 0})
 }
 
-func (eof *EOFObject) AddCodeWithType(code string, codeType []int64) {
+func (eof *EOFObject) AddCodeWithType(code []byte, codeType []int64) {
 	// Add default type for existing code
 	if len(eof.CodeSections) > 0 && len(eof.Types) == 0 {
 		eof.Types = append(eof.Types, []int64{0, 0})
@@ -131,7 +172,7 @@ func (eof *EOFObject) AddCodeWithType(code string, codeType []int64) {
 	eof.CodeSections = append(eof.CodeSections, code)
 }
 
-func (eof *EOFObject) AddContainer(container string) {
+func (eof *EOFObject) AddContainer(container []byte) {
 	eof.ContainerSections = append(eof.ContainerSections, container)
 }
 
@@ -152,7 +193,7 @@ func (eof *EOFObject) SetExplicitRuntime(explicitRuntime bool) {
 	eof.ExplicitRuntime = explicitRuntime
 }
 
-func RawBytecodeToSimpleFormat(code string) (string, error) {
+func RawBytecodeToSimpleFormat(code []byte) (string, error) {
 	ops, err := BytecodeToOpCalls(code)
 	code_desc := ""
 
@@ -167,12 +208,12 @@ func RawBytecodeToSimpleFormat(code string) (string, error) {
 		}
 
 		asm := Evm2Mnem([]OpCall{opc})
-		code_desc += fmt.Sprintf("%6s # [%v] %v\n", bc, opc.Position, asm)
+		code_desc += fmt.Sprintf("%6x # [%v] %v\n", bc, opc.Position, asm)
 	}
 	return code_desc, nil
 }
 
-func RawBytecodeToPythonFormat(code string) (string, error) {
+func RawBytecodeToPythonFormat(code []byte) (string, error) {
 	ops, err := BytecodeToOpCalls(code)
 	if err != nil {
 		return "", err
@@ -212,14 +253,14 @@ func RawBytecodeToPythonFormat(code string) (string, error) {
 func (eof *EOFObject) Describe() string {
 	code_section_headers := ""
 	for i, v := range eof.CodeSections {
-		code_section_headers += fmt.Sprintf("  %04x ", len(v)/2) + fmt.Sprintf("# Code section %v, %v bytes\n", i, len(v)/2)
+		code_section_headers += fmt.Sprintf("  %04x ", len(v)) + fmt.Sprintf("# Code section %v, %v bytes\n", i, len(v))
 	}
 
 	container_section_headers := ""
 	if len(eof.ContainerSections) > 0 {
 		container_section_headers = fmt.Sprintf("%02x%04x # Total container sections (%v)\n", CContainerId, len(eof.ContainerSections), len(eof.ContainerSections))
 		for i, v := range eof.ContainerSections {
-			container_section_headers += fmt.Sprintf("  %04x # Container section %v, %v bytes\n", len(v)/2, i, len(v)/2)
+			container_section_headers += fmt.Sprintf("  %04x # Container section %v, %v bytes\n", len(v), i, len(v))
 		}
 	}
 	if container_section_headers == "" {
@@ -243,7 +284,7 @@ func (eof *EOFObject) Describe() string {
 		code_sections += fmt.Sprintf("       # Code section %v\n", i)
 		code_description, err := RawBytecodeToSimpleFormat(v)
 		if err != nil {
-			code_sections += v
+			code_sections += hex.EncodeToString(v)
 		} else {
 			code_sections += code_description
 		}
@@ -256,7 +297,7 @@ func (eof *EOFObject) Describe() string {
 			container_sections += fmt.Sprintf("       #   Container section %v\n", i)
 			code_description, err := RawBytecodeToSimpleFormat(v)
 			if err != nil {
-				container_sections += v + "\n"
+				container_sections += hex.EncodeToString(v) + "\n"
 			} else {
 				container_sections += code_description
 			}
@@ -269,7 +310,7 @@ func (eof *EOFObject) Describe() string {
 	}
 
 	data_section := fmt.Sprintf("       # Data section %s\n", comment)
-	data_section += eof.Data
+	data_section += hex.EncodeToString(eof.Data)
 
 	eof_desc := ""
 	if len(eof.ContainerSections) == 0 {
@@ -322,7 +363,7 @@ func (eof *EOFObject) DescribeAsPython(depth uint16, index uint16) string {
 		code := ""
 		code_description, err := RawBytecodeToPythonFormat(v)
 		if err != nil {
-			code = v + "\n"
+			code = hex.EncodeToString(v) + "\n"
 		} else {
 			code = code_description
 		}
@@ -346,7 +387,7 @@ func (eof *EOFObject) DescribeAsPython(depth uint16, index uint16) string {
 				if i == len(v)-2 {
 					separator = ""
 				}
-				raw_bytecode += fmt.Sprintf("0x%s%s", v[i:i+2], separator)
+				raw_bytecode += fmt.Sprintf("0x%x%s ", v[i], separator)
 			}
 
 			formatted_subcontainer, error := ParseEOF(v)
@@ -385,7 +426,7 @@ func (eof *EOFObject) DescribeAsPython(depth uint16, index uint16) string {
 	return fmt.Sprintf(pyeof_code, str_depth, code_sections, container_sections, data_section, container_kind)
 }
 
-func calculateMaxStackAndNRF(funcId int, code string, types [][]int64) (int64, bool) {
+func calculateMaxStackAndNRF(funcId int, code []byte, types [][]int64) (int64, bool) {
 	stackHeights := map[int64]int64{}
 	startStackHeight := types[funcId][0]
 	maxStackHeight := startStackHeight
@@ -402,12 +443,12 @@ func calculateMaxStackAndNRF(funcId int, code string, types [][]int64) (int64, b
 		worklist = worklist[:ix]
 
 	outer:
-		for int(pos*2) < len(code) {
+		for int(pos)+1 < len(code) {
 			if pos < 0 {
 				fmt.Println("Position out of bounds: ", pos)
 				break
 			}
-			op, _ := strconv.ParseInt(code[pos*2:pos*2+2], 16, 64)
+			op := uint16(binary.BigEndian.Uint16([]byte{code[pos], code[pos+1]}))
 			opCode := opCodes[int(op)]
 			if exp, ok := stackHeights[pos]; ok {
 				if stackHeight != exp {
@@ -437,11 +478,11 @@ func calculateMaxStackAndNRF(funcId int, code string, types [][]int64) (int64, b
 			stackHeight += stackHeightChange
 			switch {
 			case opCode.Name == "CALLF":
-				if int(pos*2+6) > len(code) {
+				if int(pos+3) > len(code) {
 					fmt.Println("truncated CALLF")
 					break
 				}
-				calledFuncId, _ := strconv.ParseInt(code[pos*2+2:pos*2+6], 16, 64)
+				calledFuncId := int64(binary.BigEndian.Uint16([]byte{code[pos+2], code[pos+3]}))
 				if int(calledFuncId) >= len(types) {
 					fmt.Println("invalid function id")
 					break
@@ -467,19 +508,19 @@ func calculateMaxStackAndNRF(funcId int, code string, types [][]int64) (int64, b
 				}
 				break outer
 			case opCode.Name == "RJUMP":
-				if int(pos)*2+6 > len(code) {
+				if int(pos)+3 > len(code) {
 					fmt.Println("Error: Truncted RJUMP")
 					break
 				}
-				offset, _ := strconv.ParseInt(code[pos*2+2:pos*2+6], 16, 64)
+				offset := int64(binary.BigEndian.Uint16([]byte{code[pos+1], code[pos+3]}))
 				pos += (int64(opCode.Immediates) + 1 + int64(offset))
 			case opCode.Name == "RJUMPI":
-				if int(pos)*2+6 > len(code) {
+				if int(pos)+3 > len(code) {
 					fmt.Println("Error: Truncted RJUMPI")
 					break
 				}
 
-				offset, _ := strconv.ParseInt(code[pos*2+2:pos*2+6], 16, 64)
+				offset := int64(binary.BigEndian.Uint16([]byte{code[pos+1], code[pos+3]}))
 
 				if offset > 32767 {
 					offset = ((65535 - offset) + 1) * -1
@@ -488,38 +529,37 @@ func calculateMaxStackAndNRF(funcId int, code string, types [][]int64) (int64, b
 				worklist = append(worklist, []int64{pos + 3 + offset, stackHeight})
 				pos += int64(opCode.Immediates) + 1
 			case opCode.Name == "RJUMPV":
-				if int(pos)*2+4 > len(code) {
+				if int(pos)+3 > len(code) {
 					fmt.Println("Error: truncated RJUMPV")
 					break
 				}
-				count, _ := strconv.ParseInt(code[pos*2+2:pos*2+4], 16, 64)
+				count := int64(binary.BigEndian.Uint16([]byte{code[pos+1], code[pos+2]}))
 				count = count + 1
 				fmt.Println("\tcount:", count)
 
 				pos += 2
-				if int(pos)*2+int(count)*2 > len(code) {
+				if int(pos)+int(count) > len(code) {
 					fmt.Println("Error: truncated RJUMPV")
 					break
 				}
 				for i := 0; i < int(count); i++ {
 					fmt.Println("codelen:", len(code))
-					fmt.Println("target: ", int(pos)*2+4*i+4)
-					if len(code) <= int(pos)*2+4*i+4 {
+					fmt.Println("target: ", int(pos)+2*i+2)
+					if len(code) <= int(pos)+2*i+2 {
 						fmt.Println("Error: truncated RJUMPV")
 						break
 					}
 
-					offset, _ := strconv.ParseInt(code[int(pos)*2+4*i:int(pos)*2+4*i+4], 16, 64)
-
+					offset := int64(binary.BigEndian.Uint16([]byte{code[pos+2*int64(i)], code[pos+2*int64(i)+2]}))
 					if offset > 32767 {
 						offset = ((65535 - offset) + 1) * -1
 					}
 
 					fmt.Println("\toffset:", offset)
-					fmt.Println("\twE:", pos+2*count+offset)
-					worklist = append(worklist, []int64{pos + 2*count + offset, stackHeight})
+					fmt.Println("\twE:", pos+count+offset)
+					worklist = append(worklist, []int64{pos + count + offset, stackHeight})
 				}
-				pos += 2 * count
+				pos += count
 			default:
 				if opCode.IsTerminating {
 					break outer
@@ -541,169 +581,169 @@ func calculateMaxStackAndNRF(funcId int, code string, types [][]int64) (int64, b
 	return maxStackHeight, isNRF
 }
 
-func ParseEOF(eof_code string) (EOFObject, error) {
-	version := int64(0)
-	versionHex := ""
-	eof_code = strings.ToLower(eof_code)
+func consumeMagicAndVersion(bytecode []byte) ([]byte, int64, error) {
+	if len(bytecode) < 3 {
+		return bytecode, 0, errors.New("Invalid EOF code")
+	}
 
-	typesLength := int64(0)
-	types := [][]int64{}
+	if bytecode[0] != 0xef {
+		return bytecode, 0, errors.New("Invalid EOF code")
+	}
+
+	versionHex := bytecode[1:3]
+	version := int64(binary.BigEndian.Uint16(versionHex))
+	return bytecode[3:], version, nil
+}
+
+func consumeTypesHeader(bytecode []byte) ([]byte, int64, error) {
+	if len(bytecode) < 3 {
+		return bytecode, 0, errors.New("Invalid types header")
+	}
+
+	typesLengthBytes := bytecode[1:3]
+	typesLength := int64(binary.BigEndian.Uint16(typesLengthBytes))
+	return bytecode[3:], typesLength, nil
+}
+
+func consumeCodeHeader(bytecode []byte, container bool) ([]byte, []int64, error) {
 	codeHeaders := []int64{}
-	dataLength := int64(0)
-	dataContent := ""
-	containerHeaders := []int64{}
+	if len(bytecode) < 5 {
+		return bytecode, []int64{}, errors.New("Invalid code section (1)")
+	}
+	if bytecode[0] != 0x02 && !container {
+		return bytecode, []int64{}, errors.New("Invalid code section (2)")
+	}
+	if bytecode[0] != 0x03 && container {
+		return bytecode, []int64{}, errors.New("Invalid container section")
+	}
 
-	result := NewEOFObject()
+	codeSectionLengthBytes := bytecode[1:3]
+	codeSectionLength := int64(binary.BigEndian.Uint16(codeSectionLengthBytes))
 
+	for i := 3; i < int(codeSectionLength)+3; i++ {
+		codeLengthBytes := bytecode[i : i+2]
+		codeLength := int64(binary.BigEndian.Uint16(codeLengthBytes))
+		codeHeaders = append(codeHeaders, codeLength)
+		i += 1
+	}
+
+	return bytecode[int(codeSectionLength)+4:], codeHeaders, nil
+}
+
+func consumeDataSection(bytecode []byte) ([]byte, []byte, error) {
+	if len(bytecode) < 3 {
+		return bytecode, []byte{}, errors.New("Invalid data section")
+	}
+
+	if bytecode[0] != 0x04 {
+		return bytecode, []byte{}, errors.New("Invalid data section")
+	}
+
+	dataLengthBytes := bytecode[1:3]
+	dataLength := int64(binary.BigEndian.Uint16(dataLengthBytes))
+
+	if dataLength == 0 {
+		return bytecode[3:], []byte{}, nil
+	}
+	return bytecode[3:], bytecode[3 : 3+dataLength], nil
+}
+
+func consumeTerminator(bytecode []byte) ([]byte, int64, error) {
+	if len(bytecode) < 1 {
+		return bytecode, 0, errors.New("Invalid terminator")
+	}
+
+	if bytecode[0] != 0x00 {
+		return bytecode, 0, errors.New("Invalid terminator")
+	}
+
+	return bytecode[1:], 0, nil
+}
+
+func consumeTypesContent(bytecode []byte, typesLength int64) ([]byte, [][]int64, error) {
+	types := [][]int64{}
 	i := 0
 	for {
-		if i+2 > len(eof_code) {
+		if i >= int(typesLength) {
 			break
 		}
 
-		b := eof_code[i : i+2]
+		inputs := int64(bytecode[i])
+		outputs := int64(bytecode[i+1])
 
-		if versionHex == "" && b != "ef" {
-			return result, errors.New("Invalid EOF code")
+		maxStackBytes := bytecode[i+2 : i+4]
+		maxStack := int64(binary.BigEndian.Uint16(maxStackBytes))
+		types = append(types, []int64{inputs, outputs, maxStack})
+		i += 4
+	}
+	return bytecode[i:], types, nil
+}
+
+func consumeCodeContent(bytecode []byte, codeHeaders []int64) ([]byte, [][]byte, error) {
+	codeSections := [][]byte{}
+	i := 0
+	for {
+		if i >= len(codeHeaders) {
+			break
 		}
+		code := bytecode[i : i+int(codeHeaders[i])]
+		codeSections = append(codeSections, code)
+		i += int(codeHeaders[i])
+	}
+	return bytecode[i:], codeSections, nil
+}
 
-		if versionHex == "" && b == "ef" {
-			versionHex = eof_code[i+2 : i+6]
-			err := errors.New("")
-			version, err = strconv.ParseInt(versionHex, 16, 64)
+func ParseEOF(eof_code []byte) (EOFObject, error) {
+	typesLength := int64(0)
+	codeHeaders := []int64{}
+	containerHeaders := []int64{}
 
-			if err != nil {
-				return result, errors.New("Invalid version")
-			}
-			result.Version = version
-			i += 4
-		}
+	result := NewEOFObject()
+	err := errors.New("")
 
-		if b == "01" {
-			typesLengthHex := eof_code[i+2 : i+6]
-			err := errors.New("")
-			typesLength, err = strconv.ParseInt(typesLengthHex, 16, 64)
+	eof_code, result.Version, err = consumeMagicAndVersion(eof_code)
+	if err != nil {
+		return result, err
+	}
 
-			if err != nil {
-				return result, errors.New("Invalid types length")
-			}
-			i += 4
-		}
+	eof_code, typesLength, err = consumeTypesHeader(eof_code)
+	if err != nil {
+		return result, err
+	}
 
-		if b == "02" {
-			codeSectionsTotalHex := eof_code[i+2 : i+6]
-			codeSectionsTotal, err := strconv.ParseInt(codeSectionsTotalHex, 16, 64)
+	eof_code, codeHeaders, err = consumeCodeHeader(eof_code, false)
+	if err != nil {
+		return result, err
+	}
+	eof_code, containerHeaders, err = consumeCodeHeader(eof_code, true)
 
-			if err != nil {
-				return result, errors.New("Invalid code sections total")
-			}
+	eof_code, result.Data, err = consumeDataSection(eof_code)
+	if err != nil {
+		return result, err
+	}
 
-			i += 6
-			for j := 0; j < int(codeSectionsTotal); j++ {
-				codeLenHex := eof_code[i : i+4]
-				codeLen, err := strconv.ParseInt(codeLenHex, 16, 64)
+	eof_code, _, err = consumeTerminator(eof_code)
+	if err != nil {
+		return result, err
+	}
 
-				if err != nil {
-					return result, errors.New("Invalid code section length")
-				}
+	eof_code, result.Types, err = consumeTypesContent(eof_code, typesLength)
+	if err != nil {
+		return result, err
+	}
 
-				codeHeaders = append(codeHeaders, codeLen)
-				i += 4
-			}
-			i -= 2
-		}
+	eof_code, result.CodeSections, err = consumeCodeContent(eof_code, codeHeaders)
+	if err != nil {
+		return result, err
+	}
 
-		if b == "03" {
-			containerSectionsTotalHex := eof_code[i+2 : i+6]
-			containerSectionsTotal, err := strconv.ParseInt(containerSectionsTotalHex, 16, 64)
+	eof_code, result.ContainerSections, err = consumeCodeContent(eof_code, containerHeaders)
+	if err != nil {
+		return result, err
+	}
 
-			if err != nil {
-				return result, errors.New("Invalid container sections total")
-			}
-
-			i += 6
-			for j := 0; j < int(containerSectionsTotal); j++ {
-				containerLenHex := eof_code[i : i+4]
-				containerLen, err := strconv.ParseInt(containerLenHex, 16, 64)
-
-				if err != nil {
-					return result, errors.New("Invalid container section length")
-				}
-
-				containerHeaders = append(containerHeaders, containerLen)
-				i += 4
-			}
-			i -= 2
-		}
-
-		if b == "04" {
-			err := errors.New("")
-			dataLengthHex := eof_code[i+2 : i+6]
-			dataLength, err = strconv.ParseInt(dataLengthHex, 16, 64)
-
-			if err != nil {
-				return result, errors.New("Invalid data section length")
-			}
-
-			i += 4
-		}
-
-		if b == "00" {
-			for j := 0; j < int(typesLength); j += 4 {
-				inputsHex := eof_code[i+2 : i+4]
-				inputs, err := strconv.ParseInt(inputsHex, 16, 64)
-
-				if err != nil {
-					return result, errors.New("Invalid type input")
-				}
-
-				outputsHex := eof_code[i+4 : i+6]
-				outputs, err := strconv.ParseInt(outputsHex, 16, 64)
-
-				if err != nil {
-					return result, errors.New("Invalid type output")
-				}
-
-				maxStackHex := eof_code[i+6 : i+10]
-				maxStack, err := strconv.ParseInt(maxStackHex, 16, 64)
-
-				if err != nil {
-					return result, errors.New("Invalid Max Stack Height")
-				}
-
-				types = append(types, []int64{inputs, outputs, maxStack})
-				i += 8
-			}
-			i += 2
-
-			// Extract code
-			for j, ch := range codeHeaders {
-				code := eof_code[i : i+int(ch)*2]
-				result.AddCodeWithType(code, types[j])
-				i += int(ch) * 2
-			}
-
-			// Extract containers
-			for _, ch := range containerHeaders {
-				if len(eof_code) < i+int(ch)*2 {
-					return result, errors.New("Invalid container length")
-				}
-				container := eof_code[i : i+int(ch)*2]
-				result.AddContainer(container)
-				i += int(ch) * 2
-			}
-
-			// Extract data
-			if i+int(dataLength)*2 > len(eof_code) {
-				//dataContent = eof_code[i : len(eof_code)/2-i]
-				return result, errors.New("Invalid data length")
-			} else {
-				dataContent = eof_code[i : i+int(dataLength)*2]
-			}
-			result.Data = dataContent
-			i += int(dataLength) * 2
-		}
-		i += 2
+	if len(eof_code) > 0 {
+		return result, errors.New("EOF code not fully consumed")
 	}
 
 	return result, nil
