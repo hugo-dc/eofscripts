@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"os"
 	"strings"
 )
 
@@ -13,6 +14,7 @@ type EOFObject struct {
 	Version           int64
 	Types             [][]int64
 	CodeSections      [][]byte
+	DataLength        int64 // DataLength can be different to len(Data)
 	Data              []byte
 	ContainerSections [][]byte
 	InitCode          bool
@@ -206,7 +208,6 @@ func RawBytecodeToSimpleFormat(code []byte) (string, error) {
 		if err != nil {
 			panic(err)
 		}
-
 		asm := Evm2Mnem([]OpCall{opc})
 		code_desc += fmt.Sprintf("%6x # [%v] %v\n", bc, opc.Position, asm)
 	}
@@ -218,7 +219,6 @@ func RawBytecodeToPythonFormat(code []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	prev_op := OpCall{}
 	op_count := 1
 	descriptions := []string{}
@@ -382,12 +382,12 @@ func (eof *EOFObject) DescribeAsPython(depth uint16, index uint16) string {
 	if len(eof.ContainerSections) > 0 {
 		for i, v := range eof.ContainerSections {
 			raw_bytecode := ""
-			for i := 0; i < len(v); i += 2 {
+			for i := 0; i < len(v); i++ {
 				separator := ", "
-				if i == len(v)-2 {
+				if i == len(v)-1 {
 					separator = ""
 				}
-				raw_bytecode += fmt.Sprintf("0x%x%s ", v[i], separator)
+				raw_bytecode += fmt.Sprintf("0x%02x%s", v[i], separator)
 			}
 
 			formatted_subcontainer, error := ParseEOF(v)
@@ -412,7 +412,7 @@ func (eof *EOFObject) DescribeAsPython(depth uint16, index uint16) string {
 
 	data_section := ""
 	if len(eof.Data) > 0 {
-		data_section += fmt.Sprintf("  Section.Data(data=\"%s\")\n", eof.Data)
+		data_section += fmt.Sprintf("  Section.Data(data=\"%s\")\n", hex.EncodeToString(eof.Data))
 	}
 
 	container_kind := ""
@@ -432,7 +432,6 @@ func calculateMaxStackAndNRF(funcId int, code []byte, types [][]int64) (int64, b
 	maxStackHeight := startStackHeight
 	isNRF := true
 	worklist := [][]int64{{0, startStackHeight}}
-
 	opCodes := GetOpcodesByNumber()
 
 	for {
@@ -445,15 +444,16 @@ func calculateMaxStackAndNRF(funcId int, code []byte, types [][]int64) (int64, b
 	outer:
 		for int(pos)+1 < len(code) {
 			if pos < 0 {
-				fmt.Println("Position out of bounds: ", pos)
+				fmt.Fprintf(os.Stderr, "Position out of bounds: %v\n", pos)
 				break
 			}
-			op := uint16(binary.BigEndian.Uint16([]byte{code[pos], code[pos+1]}))
+			//op := uint16(binary.BigEndian.Uint16([]byte{code[pos], code[pos+1]}))
+			op := uint16(code[pos])
 			opCode := opCodes[int(op)]
 			if exp, ok := stackHeights[pos]; ok {
 				if stackHeight != exp {
-					fmt.Println("stackHeight:", stackHeight, "exp:", exp, "at pos", pos)
-					fmt.Println("Error: stack height mismatch for different paths")
+					fmt.Fprintf(os.Stderr, "stackHeight: %v exp: %v at pos %v\n", stackHeight, exp, pos)
+					fmt.Fprintf(os.Stderr, "Error: stack height mismatch for different paths\n")
 					break
 				} else {
 					break
@@ -466,12 +466,11 @@ func calculateMaxStackAndNRF(funcId int, code []byte, types [][]int64) (int64, b
 			stackHeightChange := int64(opCode.StackOutput - opCode.StackInput)
 
 			if stackHeightRequired > stackHeight {
-				fmt.Println("stackHeightRequired:", stackHeightRequired, "stackHeight:", stackHeight)
-				fmt.Println("stack underflow")
+				fmt.Fprintf(os.Stderr, "stackHeightRequired: %v stackHeight: %v\nstack overflow\n", stackHeightRequired, stackHeight)
 			}
 
 			if (1024 + stackHeightChange) < stackHeight {
-				fmt.Println("stack overflow")
+				fmt.Fprintf(os.Stderr, "stack overflow\n")
 				break
 			}
 
@@ -479,24 +478,24 @@ func calculateMaxStackAndNRF(funcId int, code []byte, types [][]int64) (int64, b
 			switch {
 			case opCode.Name == "CALLF":
 				if int(pos+3) > len(code) {
-					fmt.Println("truncated CALLF")
+					fmt.Fprintf(os.Stderr, "truncated CALLF\n")
 					break
 				}
 				calledFuncId := int64(binary.BigEndian.Uint16([]byte{code[pos+2], code[pos+3]}))
 				if int(calledFuncId) >= len(types) {
-					fmt.Println("invalid function id")
+					fmt.Fprintf(os.Stderr, "invalid function id\n")
 					break
 				}
 				stackHeightRequired += int64(types[calledFuncId][0])
 				stackHeightChange += int64(types[calledFuncId][1] - types[calledFuncId][0])
 
 				if stackHeightRequired > stackHeight {
-					fmt.Println("stack underflow")
+					fmt.Fprintf(os.Stderr, "stack underflow\n")
 					break
 				}
 
 				if (1024 + stackHeightChange) < stackHeight {
-					fmt.Println("stack overflow")
+					fmt.Fprintf(os.Stderr, "stack overflow\n")
 					break
 				}
 				stackHeight += stackHeightChange
@@ -504,19 +503,19 @@ func calculateMaxStackAndNRF(funcId int, code []byte, types [][]int64) (int64, b
 			case opCode.Name == "RETF":
 				isNRF = false
 				if int64(types[funcId][1]) != stackHeight {
-					fmt.Printf("Wrong number of outputs (want:%d, got: %d)\n", types[funcId][1], stackHeight)
+					fmt.Fprintf(os.Stderr, "Wrong number of outputs (want:%d, got: %d)\n", types[funcId][1], stackHeight)
 				}
 				break outer
 			case opCode.Name == "RJUMP":
 				if int(pos)+3 > len(code) {
-					fmt.Println("Error: Truncted RJUMP")
+					fmt.Fprintf(os.Stderr, "Error: Truncted RJUMP\n")
 					break
 				}
 				offset := int64(binary.BigEndian.Uint16([]byte{code[pos+1], code[pos+3]}))
 				pos += (int64(opCode.Immediates) + 1 + int64(offset))
 			case opCode.Name == "RJUMPI":
 				if int(pos)+3 > len(code) {
-					fmt.Println("Error: Truncted RJUMPI")
+					fmt.Fprintf(os.Stderr, "Error: Truncted RJUMPI\n")
 					break
 				}
 
@@ -530,23 +529,23 @@ func calculateMaxStackAndNRF(funcId int, code []byte, types [][]int64) (int64, b
 				pos += int64(opCode.Immediates) + 1
 			case opCode.Name == "RJUMPV":
 				if int(pos)+3 > len(code) {
-					fmt.Println("Error: truncated RJUMPV")
+					fmt.Fprintf(os.Stderr, "Error: truncated RJUMPV\n")
 					break
 				}
 				count := int64(binary.BigEndian.Uint16([]byte{code[pos+1], code[pos+2]}))
 				count = count + 1
-				fmt.Println("\tcount:", count)
+				fmt.Fprintf(os.Stderr, "\tcount: %v\n", count)
 
 				pos += 2
 				if int(pos)+int(count) > len(code) {
-					fmt.Println("Error: truncated RJUMPV")
+					fmt.Fprintf(os.Stderr, "Error: truncated RJUMPV\n")
 					break
 				}
 				for i := 0; i < int(count); i++ {
-					fmt.Println("codelen:", len(code))
-					fmt.Println("target: ", int(pos)+2*i+2)
+					fmt.Fprintf(os.Stderr, "codelen: %v\n", len(code))
+					fmt.Fprintf(os.Stderr, "target: %v", int(pos)+2*i+2)
 					if len(code) <= int(pos)+2*i+2 {
-						fmt.Println("Error: truncated RJUMPV")
+						fmt.Fprintf(os.Stderr, "Error: truncated RJUMPV\n")
 						break
 					}
 
@@ -555,8 +554,8 @@ func calculateMaxStackAndNRF(funcId int, code []byte, types [][]int64) (int64, b
 						offset = ((65535 - offset) + 1) * -1
 					}
 
-					fmt.Println("\toffset:", offset)
-					fmt.Println("\twE:", pos+count+offset)
+					fmt.Fprintf(os.Stderr, "\toffset: %v\n", offset)
+					fmt.Fprintf(os.Stderr, "\twE: %v\n", pos+count+offset)
 					worklist = append(worklist, []int64{pos + count + offset, stackHeight})
 				}
 				pos += count
@@ -571,7 +570,7 @@ func calculateMaxStackAndNRF(funcId int, code []byte, types [][]int64) (int64, b
 		}
 
 		if maxStackHeight > 1024 {
-			fmt.Println("Error: max stack above limit")
+			fmt.Fprintf(os.Stderr, "Error: max stack above limit\n")
 		}
 
 		if len(worklist) == 0 {
@@ -616,36 +615,29 @@ func consumeCodeHeader(bytecode []byte, container bool) ([]byte, []int64, error)
 	if bytecode[0] != 0x03 && container {
 		return bytecode, []int64{}, errors.New("Invalid container section")
 	}
-
 	codeSectionLengthBytes := bytecode[1:3]
 	codeSectionLength := int64(binary.BigEndian.Uint16(codeSectionLengthBytes))
-
-	for i := 3; i < int(codeSectionLength)+3; i++ {
+	for i := 3; i < int(codeSectionLength)*2+3; i += 2 {
 		codeLengthBytes := bytecode[i : i+2]
 		codeLength := int64(binary.BigEndian.Uint16(codeLengthBytes))
 		codeHeaders = append(codeHeaders, codeLength)
-		i += 1
 	}
-
-	return bytecode[int(codeSectionLength)+4:], codeHeaders, nil
+	return bytecode[int(codeSectionLength)*2+3:], codeHeaders, nil
 }
 
-func consumeDataSection(bytecode []byte) ([]byte, []byte, error) {
+func consumeDataHeader(bytecode []byte) ([]byte, int64, error) {
 	if len(bytecode) < 3 {
-		return bytecode, []byte{}, errors.New("Invalid data section")
+		return bytecode, 0, errors.New("Invalid data Header")
 	}
 
 	if bytecode[0] != 0x04 {
-		return bytecode, []byte{}, errors.New("Invalid data section")
+		return bytecode, 0, errors.New("Invalid data Header")
 	}
 
 	dataLengthBytes := bytecode[1:3]
 	dataLength := int64(binary.BigEndian.Uint16(dataLengthBytes))
 
-	if dataLength == 0 {
-		return bytecode[3:], []byte{}, nil
-	}
-	return bytecode[3:], bytecode[3 : 3+dataLength], nil
+	return bytecode[3:], dataLength, nil
 }
 
 func consumeTerminator(bytecode []byte) ([]byte, int64, error) {
@@ -681,16 +673,23 @@ func consumeTypesContent(bytecode []byte, typesLength int64) ([]byte, [][]int64,
 
 func consumeCodeContent(bytecode []byte, codeHeaders []int64) ([]byte, [][]byte, error) {
 	codeSections := [][]byte{}
-	i := 0
-	for {
-		if i >= len(codeHeaders) {
+	bcIndex := 0
+	for chIndex := 0; chIndex < len(codeHeaders); chIndex++ {
+		if chIndex >= len(codeHeaders) {
 			break
 		}
-		code := bytecode[i : i+int(codeHeaders[i])]
+		code := bytecode[bcIndex : bcIndex+int(codeHeaders[chIndex])]
 		codeSections = append(codeSections, code)
-		i += int(codeHeaders[i])
+		bcIndex += int(codeHeaders[chIndex])
 	}
-	return bytecode[i:], codeSections, nil
+	return bytecode[bcIndex:], codeSections, nil
+}
+
+func consumeBytes(bytecode []byte, numBytes int64) ([]byte, []byte) {
+	if len(bytecode) < int(numBytes) {
+		return bytecode, []byte{}
+	}
+	return bytecode[numBytes:], bytecode[:numBytes]
 }
 
 func ParseEOF(eof_code []byte) (EOFObject, error) {
@@ -715,9 +714,15 @@ func ParseEOF(eof_code []byte) (EOFObject, error) {
 	if err != nil {
 		return result, err
 	}
-	eof_code, containerHeaders, err = consumeCodeHeader(eof_code, true)
 
-	eof_code, result.Data, err = consumeDataSection(eof_code)
+	if eof_code[0] == 0x03 {
+		eof_code, containerHeaders, err = consumeCodeHeader(eof_code, true)
+		if err != nil {
+			return result, err
+		}
+	}
+
+	eof_code, result.DataLength, err = consumeDataHeader(eof_code)
 	if err != nil {
 		return result, err
 	}
@@ -736,11 +741,12 @@ func ParseEOF(eof_code []byte) (EOFObject, error) {
 	if err != nil {
 		return result, err
 	}
-
 	eof_code, result.ContainerSections, err = consumeCodeContent(eof_code, containerHeaders)
 	if err != nil {
 		return result, err
 	}
+
+	eof_code, result.Data = consumeBytes(eof_code, result.DataLength)
 
 	if len(eof_code) > 0 {
 		return result, errors.New("EOF code not fully consumed")

@@ -26,6 +26,9 @@ func main() {
 
 		if arg[:2] == "c:" {
 			code := arg[2:]
+			if code[:2] == "0x" {
+				code = code[2:]
+			}
 			_, err := hex.DecodeString(code)
 			if err != nil {
 				fmt.Println("Error: ", err)

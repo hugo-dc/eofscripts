@@ -131,25 +131,25 @@ func BytecodeToOpCalls(bytecode []byte) ([]OpCall, error) {
 			if op.Immediates > 0 {
 				immediate := bytecode[i+1 : i+1+(op.Immediates)]
 				opCall.Immediates = append(opCall.Immediates, Immediate{Type: Value, Immediate: immediate})
-				immediateInt := int64(binary.BigEndian.Uint16([]byte{immediate[0], 0}))
+				immediateInt := 0
 
 				// RJUMPV can have many immediates
 				if op.Name == "RJUMPV" {
+					immediateInt = int(immediate[0])
 					i += 1
 					for j := 0; j <= int(immediateInt); j++ {
 						if i+3 > len(bytecode) {
 							return nil, errors.New(fmt.Sprintf("Truncated RJUMPV at position %d", i))
 						}
-						immediate := bytecode[i+2 : i+6]
+						immediate := bytecode[i+1 : i+3]
 						opCall.Immediates = append(opCall.Immediates, Immediate{Type: Value, Immediate: immediate})
-						i += 4
+						i += 2
 					}
-					i -= 2
+					i -= 1
 				}
 			}
 			result = append(result, opCall)
-
-			i += op.Immediates * 2
+			i += op.Immediates
 		} else {
 			uopName := fmt.Sprintf("OPCODE_%02X", code)
 			undefinedOp := OpCode{Code: int(code), Name: uopName, Immediates: 0, StackInput: 0, StackOutput: 0, IsTerminating: false}
@@ -157,7 +157,6 @@ func BytecodeToOpCalls(bytecode []byte) ([]OpCall, error) {
 			result = append(result, opCall)
 		}
 	}
-
 	return result, nil
 }
 

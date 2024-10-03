@@ -49,7 +49,7 @@ func main() {
 
 	if err != nil {
 		fmt.Println("Error: ", err)
-		return
+		panic(err)
 	}
 	if is_initcode {
 		eofObject.SetInitcode(is_initcode)
