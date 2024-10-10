@@ -48,8 +48,8 @@ func main() {
 	eofObject, err := common.ParseEOF(eofBytecode)
 
 	if err != nil {
-		fmt.Println("Error: ", err)
-		panic(err)
+		fmt.Println(common.DescribeEOFBytecodeAsPython(eofBytecode, 0, 0))
+		return
 	}
 	if is_initcode {
 		eofObject.SetInitcode(is_initcode)

@@ -692,6 +692,81 @@ func consumeBytes(bytecode []byte, numBytes int64) ([]byte, []byte) {
 	return bytecode[numBytes:], bytecode[:numBytes]
 }
 
+func formatRemainingCode(bytecode []byte) string {
+	result := ""
+	if len(bytecode) > 0 {
+		for i := 0; i < len(bytecode); i++ {
+			result += fmt.Sprintf("0x%02x,\n        ", bytecode[i])
+		}
+	}
+	return result
+}
+
+func DescribeEOFBytecodeAsPython(bytecode []byte, depth uint16, index uint16) string {
+	result := `Container(
+    name="EOFV1_00%s",
+    raw_bytes=(
+      [
+        %s
+      ]),
+),`
+
+	codeDesc := ""
+	bytecode, version, err := consumeMagicAndVersion(bytecode)
+	if err != nil {
+		codeDesc += fmt.Sprintf("#--- Error found: Invalid Magic+Version ---#\n        ")
+		codeDesc += formatRemainingCode(bytecode)
+		result = fmt.Sprintf(result, fmt.Sprintf("00%02x", depth), codeDesc)
+		return result
+	}
+	versionBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(versionBytes, uint16(version))
+	codeDesc += fmt.Sprintf("0xef, 0x%02x, 0x%02x # Version: %v\n        ", versionBytes[0], versionBytes[1], version)
+
+	bytecode, typesLength, err := consumeTypesHeader(bytecode)
+	if err != nil {
+		codeDesc += fmt.Sprintf("#--- Error: Invalid Types Header ---#\n        ")
+		codeDesc += formatRemainingCode(bytecode)
+		result = fmt.Sprintf(result, fmt.Sprintf("00%02x", depth), codeDesc)
+		return result
+	}
+	typesLengthBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(typesLengthBytes, uint16(typesLength))
+	codeDesc += fmt.Sprintf("0x%02x, 0x%02x, 0x%02x # Types Length: %v\n        ", CTypeId, typesLengthBytes[0], typesLengthBytes[1], typesLength)
+
+	bytecode, codeHeaders, err := consumeCodeHeader(bytecode, false)
+	if err != nil {
+		codeDesc += fmt.Sprintf("#--- Error: Invalid Code Header ---#\n        ")
+		codeDesc += formatRemainingCode(bytecode)
+		result = fmt.Sprintf(result, fmt.Sprintf("00%02x", depth), codeDesc)
+		return result
+	}
+	lenCodeHeadersBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(lenCodeHeadersBytes, uint16(len(codeHeaders)))
+	fmt.Println("> Code Headers: ", codeHeaders)
+	codeDesc += fmt.Sprintf("0x%02x, 0x%02x, 0x%02x # Code Sections (Length: %v)\n        ", CCodeId, lenCodeHeadersBytes[0], lenCodeHeadersBytes[1], len(codeHeaders))
+
+	for i, ch := range codeHeaders {
+		csLengthBytes := make([]byte, 2)
+		binary.BigEndian.PutUint16(csLengthBytes, uint16(ch))
+		codeDesc += fmt.Sprintf("      0x%02x, 0x%02x #   Code Section %v (Length: %v)\n        ", csLengthBytes[0], csLengthBytes[1], i, ch)
+	}
+
+	bytecode, dataLength, err := consumeDataHeader(bytecode)
+	if err != nil {
+		codeDesc += fmt.Sprintf("#--- Error: Invalid Data Header ---#\n        ")
+		codeDesc += formatRemainingCode(bytecode)
+		result = fmt.Sprintf(result, fmt.Sprintf("00%02x", depth), codeDesc)
+		return result
+	}
+	dataLengthBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(dataLengthBytes, uint16(dataLength))
+	codeDesc += fmt.Sprintf("0x%02x, 0x%02x, 0x%02x # Data Length: %v\n        ", CDataId, dataLengthBytes[0], dataLengthBytes[1], dataLength)
+
+	result = fmt.Sprintf(result, fmt.Sprintf("00%02x", depth), codeDesc)
+	return result
+}
+
 func ParseEOF(eof_code []byte) (EOFObject, error) {
 	typesLength := int64(0)
 	codeHeaders := []int64{}
